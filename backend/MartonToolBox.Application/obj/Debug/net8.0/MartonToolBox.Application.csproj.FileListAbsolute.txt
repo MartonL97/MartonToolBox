@@ -1,0 +1,15 @@
+/Users/lakatosmarton/Desktop/MartonToolBox/backend/MartonToolBox.Application/bin/Debug/net8.0/MartonToolBox.Application.deps.json
+/Users/lakatosmarton/Desktop/MartonToolBox/backend/MartonToolBox.Application/bin/Debug/net8.0/MartonToolBox.Application.dll
+/Users/lakatosmarton/Desktop/MartonToolBox/backend/MartonToolBox.Application/bin/Debug/net8.0/MartonToolBox.Application.pdb
+/Users/lakatosmarton/Desktop/MartonToolBox/backend/MartonToolBox.Application/bin/Debug/net8.0/MartonToolBox.Domain.dll
+/Users/lakatosmarton/Desktop/MartonToolBox/backend/MartonToolBox.Application/bin/Debug/net8.0/MartonToolBox.Domain.pdb
+/Users/lakatosmarton/Desktop/MartonToolBox/backend/MartonToolBox.Application/obj/Debug/net8.0/MartonToolBox.Application.csproj.AssemblyReference.cache
+/Users/lakatosmarton/Desktop/MartonToolBox/backend/MartonToolBox.Application/obj/Debug/net8.0/MartonToolBox.Application.GeneratedMSBuildEditorConfig.editorconfig
+/Users/lakatosmarton/Desktop/MartonToolBox/backend/MartonToolBox.Application/obj/Debug/net8.0/MartonToolBox.Application.AssemblyInfoInputs.cache
+/Users/lakatosmarton/Desktop/MartonToolBox/backend/MartonToolBox.Application/obj/Debug/net8.0/MartonToolBox.Application.AssemblyInfo.cs
+/Users/lakatosmarton/Desktop/MartonToolBox/backend/MartonToolBox.Application/obj/Debug/net8.0/MartonToolBox.Application.csproj.CoreCompileInputs.cache
+/Users/lakatosmarton/Desktop/MartonToolBox/backend/MartonToolBox.Application/obj/Debug/net8.0/MartonTo.85EAE7AD.Up2Date
+/Users/lakatosmarton/Desktop/MartonToolBox/backend/MartonToolBox.Application/obj/Debug/net8.0/MartonToolBox.Application.dll
+/Users/lakatosmarton/Desktop/MartonToolBox/backend/MartonToolBox.Application/obj/Debug/net8.0/refint/MartonToolBox.Application.dll
+/Users/lakatosmarton/Desktop/MartonToolBox/backend/MartonToolBox.Application/obj/Debug/net8.0/MartonToolBox.Application.pdb
+/Users/lakatosmarton/Desktop/MartonToolBox/backend/MartonToolBox.Application/obj/Debug/net8.0/ref/MartonToolBox.Application.dll

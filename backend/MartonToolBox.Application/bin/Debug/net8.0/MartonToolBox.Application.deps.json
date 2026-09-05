@@ -1,0 +1,39 @@
+{
+  "runtimeTarget": {
+    "name": ".NETCoreApp,Version=v8.0",
+    "signature": ""
+  },
+  "compilationOptions": {},
+  "targets": {
+    ".NETCoreApp,Version=v8.0": {
+      "MartonToolBox.Application/1.0.0": {
+        "dependencies": {
+          "MartonToolBox.Domain": "1.0.0"
+        },
+        "runtime": {
+          "MartonToolBox.Application.dll": {}
+        }
+      },
+      "MartonToolBox.Domain/1.0.0": {
+        "runtime": {
+          "MartonToolBox.Domain.dll": {
+            "assemblyVersion": "1.0.0",
+            "fileVersion": "1.0.0.0"
+          }
+        }
+      }
+    }
+  },
+  "libraries": {
+    "MartonToolBox.Application/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    },
+    "MartonToolBox.Domain/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    }
+  }
+}

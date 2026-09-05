@@ -1,0 +1,97 @@
+{
+  "version": 3,
+  "targets": {
+    "net8.0": {
+      "MartonToolBox.Domain/1.0.0": {
+        "type": "project",
+        "framework": ".NETCoreApp,Version=v8.0",
+        "compile": {
+          "bin/placeholder/MartonToolBox.Domain.dll": {}
+        },
+        "runtime": {
+          "bin/placeholder/MartonToolBox.Domain.dll": {}
+        },
+        "frameworkReferences": [
+          "Microsoft.AspNetCore.App"
+        ]
+      }
+    }
+  },
+  "libraries": {
+    "MartonToolBox.Domain/1.0.0": {
+      "type": "project",
+      "path": "../MartonToolBox.Domain/MartonToolBox.Domain.csproj",
+      "msbuildProject": "../MartonToolBox.Domain/MartonToolBox.Domain.csproj"
+    }
+  },
+  "projectFileDependencyGroups": {
+    "net8.0": [
+      "MartonToolBox.Domain >= 1.0.0"
+    ]
+  },
+  "packageFolders": {
+    "/Users/lakatosmarton/.nuget/packages/": {}
+  },
+  "project": {
+    "version": "1.0.0",
+    "restore": {
+      "projectUniqueName": "/Users/lakatosmarton/Desktop/MartonToolBox/backend/MartonToolBox.Application/MartonToolBox.Application.csproj",
+      "projectName": "MartonToolBox.Application",
+      "projectPath": "/Users/lakatosmarton/Desktop/MartonToolBox/backend/MartonToolBox.Application/MartonToolBox.Application.csproj",
+      "packagesPath": "/Users/lakatosmarton/.nuget/packages/",
+      "outputPath": "/Users/lakatosmarton/Desktop/MartonToolBox/backend/MartonToolBox.Application/obj/",
+      "projectStyle": "PackageReference",
+      "configFilePaths": [
+        "/Users/lakatosmarton/.nuget/NuGet/NuGet.Config"
+      ],
+      "originalTargetFrameworks": [
+        "net8.0"
+      ],
+      "sources": {
+        "https://api.nuget.org/v3/index.json": {}
+      },
+      "frameworks": {
+        "net8.0": {
+          "targetAlias": "net8.0",
+          "projectReferences": {
+            "/Users/lakatosmarton/Desktop/MartonToolBox/backend/MartonToolBox.Domain/MartonToolBox.Domain.csproj": {
+              "projectPath": "/Users/lakatosmarton/Desktop/MartonToolBox/backend/MartonToolBox.Domain/MartonToolBox.Domain.csproj"
+            }
+          }
+        }
+      },
+      "warningProperties": {
+        "warnAsError": [
+          "NU1605"
+        ]
+      },
+      "restoreAuditProperties": {
+        "enableAudit": "true",
+        "auditLevel": "low",
+        "auditMode": "direct"
+      }
+    },
+    "frameworks": {
+      "net8.0": {
+        "targetAlias": "net8.0",
+        "imports": [
+          "net461",
+          "net462",
+          "net47",
+          "net471",
+          "net472",
+          "net48",
+          "net481"
+        ],
+        "assetTargetFallback": true,
+        "warn": true,
+        "frameworkReferences": {
+          "Microsoft.NETCore.App": {
+            "privateAssets": "all"
+          }
+        },
+        "runtimeIdentifierGraphPath": "/Users/lakatosmarton/.dotnet/sdk/8.0.422/PortableRuntimeIdentifierGraph.json"
+      }
+    }
+  }
+}

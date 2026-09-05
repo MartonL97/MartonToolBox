@@ -1,0 +1,25 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-martontoolbox}
+      POSTGRES_USER: ${POSTGRES_USER:-martontoolbox}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change-me-before-production}
+    volumes: [postgres-data:/var/lib/postgresql/data]
+    ports: ["5433:5432"]
+  backend:
+    build: ./backend
+    environment:
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Development}
+      ASPNETCORE_URLS: http://+:8080
+      ConnectionStrings__Postgres: Host=postgres;Port=5432;Database=${POSTGRES_DB:-martontoolbox};Username=${POSTGRES_USER:-martontoolbox};Password=${POSTGRES_PASSWORD:-change-me-before-production}
+      Jwt__Key: ${JWT_KEY:-replace-this-with-a-long-random-secret-key-before-production}
+      Cors__Origin: http://localhost:4200
+    depends_on: [postgres]
+    ports: ["8080:8080"]
+  frontend:
+    build: ./frontend/marton-toolbox
+    depends_on: [backend]
+    ports: ["4200:80"]
+volumes:
+  postgres-data:
