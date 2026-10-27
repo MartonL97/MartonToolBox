@@ -9,3 +9,15 @@
 /Users/lakatosmarton/Desktop/MartonToolBox/backend/MartonToolBox.Domain/obj/Debug/net8.0/refint/MartonToolBox.Domain.dll
 /Users/lakatosmarton/Desktop/MartonToolBox/backend/MartonToolBox.Domain/obj/Debug/net8.0/MartonToolBox.Domain.pdb
 /Users/lakatosmarton/Desktop/MartonToolBox/backend/MartonToolBox.Domain/obj/Debug/net8.0/ref/MartonToolBox.Domain.dll
+/Users/lakatosmarton/Desktop/MartonToolbox Repo/backend/MartonToolBox.Domain/bin/Debug/net8.0/MartonToolBox.Domain.deps.json
+/Users/lakatosmarton/Desktop/MartonToolbox Repo/backend/MartonToolBox.Domain/bin/Debug/net8.0/MartonToolBox.Domain.dll
+/Users/lakatosmarton/Desktop/MartonToolbox Repo/backend/MartonToolBox.Domain/bin/Debug/net8.0/MartonToolBox.Domain.pdb
+/Users/lakatosmarton/Desktop/MartonToolbox Repo/backend/MartonToolBox.Domain/obj/Debug/net8.0/MartonToolBox.Domain.GeneratedMSBuildEditorConfig.editorconfig
+/Users/lakatosmarton/Desktop/MartonToolbox Repo/backend/MartonToolBox.Domain/obj/Debug/net8.0/MartonToolBox.Domain.AssemblyInfoInputs.cache
+/Users/lakatosmarton/Desktop/MartonToolbox Repo/backend/MartonToolBox.Domain/obj/Debug/net8.0/MartonToolBox.Domain.AssemblyInfo.cs
+/Users/lakatosmarton/Desktop/MartonToolbox Repo/backend/MartonToolBox.Domain/obj/Debug/net8.0/MartonToolBox.Domain.csproj.CoreCompileInputs.cache
+/Users/lakatosmarton/Desktop/MartonToolbox Repo/backend/MartonToolBox.Domain/obj/Debug/net8.0/MartonToolBox.Domain.sourcelink.json
+/Users/lakatosmarton/Desktop/MartonToolbox Repo/backend/MartonToolBox.Domain/obj/Debug/net8.0/MartonToolBox.Domain.dll
+/Users/lakatosmarton/Desktop/MartonToolbox Repo/backend/MartonToolBox.Domain/obj/Debug/net8.0/refint/MartonToolBox.Domain.dll
+/Users/lakatosmarton/Desktop/MartonToolbox Repo/backend/MartonToolBox.Domain/obj/Debug/net8.0/MartonToolBox.Domain.pdb
+/Users/lakatosmarton/Desktop/MartonToolbox Repo/backend/MartonToolBox.Domain/obj/Debug/net8.0/ref/MartonToolBox.Domain.dll

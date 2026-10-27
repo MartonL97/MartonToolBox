@@ -15,6 +15,26 @@ services:
       ConnectionStrings__Postgres: Host=postgres;Port=5432;Database=${POSTGRES_DB:-martontoolbox};Username=${POSTGRES_USER:-martontoolbox};Password=${POSTGRES_PASSWORD:-change-me-before-production}
       Jwt__Key: ${JWT_KEY:-replace-this-with-a-long-random-secret-key-before-production}
       Cors__Origin: http://localhost:4200
+      Payments__Provider: ${PAYMENTS_PROVIDER:-PayU}
+      Payments__AmountRon: ${PAYMENTS_AMOUNT_RON:-10}
+      Revolut__BaseUrl: ${REVOLUT_BASE_URL:-https://sandbox-merchant.revolut.com/}
+      Revolut__ApiVersion: ${REVOLUT_API_VERSION:-2024-09-01}
+      Revolut__SecretKey: ${REVOLUT_SECRET_KEY:-}
+      Revolut__WebhookSigningSecret: ${REVOLUT_WEBHOOK_SECRET:-}
+      PayU__TestMode: ${PAYU_TEST_MODE:-true}
+      PayU__BaseUrl: ${PAYU_BASE_URL:-https://secure.payu.com/}
+      PayU__PosId: ${PAYU_POS_ID:-}
+      PayU__ClientId: ${PAYU_CLIENT_ID:-}
+      PayU__ClientSecret: ${PAYU_CLIENT_SECRET:-}
+      PayU__SecondKey: ${PAYU_SECOND_KEY:-}
+      PayU__Currency: ${PAYU_CURRENCY:-RON}
+      Smtp__Host: ${SMTP_HOST:-}
+      Smtp__Port: ${SMTP_PORT:-587}
+      Smtp__Username: ${SMTP_USERNAME:-}
+      Smtp__Password: ${SMTP_PASSWORD:-}
+      Smtp__FromEmail: ${SMTP_FROM_EMAIL:-}
+      Frontend__BaseUrl: ${FRONTEND_BASE_URL:-http://localhost:4200}
+      Backend__BaseUrl: ${BACKEND_BASE_URL:-http://localhost:8080}
     depends_on: [postgres]
     ports: ["8080:8080"]
   frontend:

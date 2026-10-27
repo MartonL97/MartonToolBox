@@ -13,11 +13,11 @@
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "/Users/lakatosmarton/Desktop/MartonToolBox/backend/MartonToolBox.Domain/MartonToolBox.Domain.csproj",
+      "projectUniqueName": "/Users/lakatosmarton/Desktop/MartonToolbox Repo/backend/MartonToolBox.Domain/MartonToolBox.Domain.csproj",
       "projectName": "MartonToolBox.Domain",
-      "projectPath": "/Users/lakatosmarton/Desktop/MartonToolBox/backend/MartonToolBox.Domain/MartonToolBox.Domain.csproj",
+      "projectPath": "/Users/lakatosmarton/Desktop/MartonToolbox Repo/backend/MartonToolBox.Domain/MartonToolBox.Domain.csproj",
       "packagesPath": "/Users/lakatosmarton/.nuget/packages/",
-      "outputPath": "/Users/lakatosmarton/Desktop/MartonToolBox/backend/MartonToolBox.Domain/obj/",
+      "outputPath": "/Users/lakatosmarton/Desktop/MartonToolbox Repo/backend/MartonToolBox.Domain/obj/",
       "projectStyle": "PackageReference",
       "configFilePaths": [
         "/Users/lakatosmarton/.nuget/NuGet/NuGet.Config"

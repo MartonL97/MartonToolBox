@@ -22,3 +22,9 @@ npm-debug.log*
 # OS
 .DS_Store
 Thumbs.db
+
+# Machine-local backend secrets
+**/appsettings.Local.json
+
+# Local run logs
+.logs/

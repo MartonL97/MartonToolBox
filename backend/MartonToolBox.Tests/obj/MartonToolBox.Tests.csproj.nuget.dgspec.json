@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "/Users/lakatosmarton/Desktop/MartonToolBox/backend/MartonToolBox.Tests/MartonToolBox.Tests.csproj": {}
+    "/Users/lakatosmarton/Desktop/MartonToolbox Repo/backend/MartonToolBox.Tests/MartonToolBox.Tests.csproj": {}
   },
   "projects": {
-    "/Users/lakatosmarton/Desktop/MartonToolBox/backend/MartonToolBox.Application/MartonToolBox.Application.csproj": {
+    "/Users/lakatosmarton/Desktop/MartonToolbox Repo/backend/MartonToolBox.Application/MartonToolBox.Application.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "/Users/lakatosmarton/Desktop/MartonToolBox/backend/MartonToolBox.Application/MartonToolBox.Application.csproj",
+        "projectUniqueName": "/Users/lakatosmarton/Desktop/MartonToolbox Repo/backend/MartonToolBox.Application/MartonToolBox.Application.csproj",
         "projectName": "MartonToolBox.Application",
-        "projectPath": "/Users/lakatosmarton/Desktop/MartonToolBox/backend/MartonToolBox.Application/MartonToolBox.Application.csproj",
+        "projectPath": "/Users/lakatosmarton/Desktop/MartonToolbox Repo/backend/MartonToolBox.Application/MartonToolBox.Application.csproj",
         "packagesPath": "/Users/lakatosmarton/.nuget/packages/",
-        "outputPath": "/Users/lakatosmarton/Desktop/MartonToolBox/backend/MartonToolBox.Application/obj/",
+        "outputPath": "/Users/lakatosmarton/Desktop/MartonToolbox Repo/backend/MartonToolBox.Application/obj/",
         "projectStyle": "PackageReference",
         "configFilePaths": [
           "/Users/lakatosmarton/.nuget/NuGet/NuGet.Config"
@@ -26,8 +26,8 @@
           "net8.0": {
             "targetAlias": "net8.0",
             "projectReferences": {
-              "/Users/lakatosmarton/Desktop/MartonToolBox/backend/MartonToolBox.Domain/MartonToolBox.Domain.csproj": {
-                "projectPath": "/Users/lakatosmarton/Desktop/MartonToolBox/backend/MartonToolBox.Domain/MartonToolBox.Domain.csproj"
+              "/Users/lakatosmarton/Desktop/MartonToolbox Repo/backend/MartonToolBox.Domain/MartonToolBox.Domain.csproj": {
+                "projectPath": "/Users/lakatosmarton/Desktop/MartonToolbox Repo/backend/MartonToolBox.Domain/MartonToolBox.Domain.csproj"
               }
             }
           }
@@ -66,14 +66,14 @@
         }
       }
     },
-    "/Users/lakatosmarton/Desktop/MartonToolBox/backend/MartonToolBox.Domain/MartonToolBox.Domain.csproj": {
+    "/Users/lakatosmarton/Desktop/MartonToolbox Repo/backend/MartonToolBox.Domain/MartonToolBox.Domain.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "/Users/lakatosmarton/Desktop/MartonToolBox/backend/MartonToolBox.Domain/MartonToolBox.Domain.csproj",
+        "projectUniqueName": "/Users/lakatosmarton/Desktop/MartonToolbox Repo/backend/MartonToolBox.Domain/MartonToolBox.Domain.csproj",
         "projectName": "MartonToolBox.Domain",
-        "projectPath": "/Users/lakatosmarton/Desktop/MartonToolBox/backend/MartonToolBox.Domain/MartonToolBox.Domain.csproj",
+        "projectPath": "/Users/lakatosmarton/Desktop/MartonToolbox Repo/backend/MartonToolBox.Domain/MartonToolBox.Domain.csproj",
         "packagesPath": "/Users/lakatosmarton/.nuget/packages/",
-        "outputPath": "/Users/lakatosmarton/Desktop/MartonToolBox/backend/MartonToolBox.Domain/obj/",
+        "outputPath": "/Users/lakatosmarton/Desktop/MartonToolbox Repo/backend/MartonToolBox.Domain/obj/",
         "projectStyle": "PackageReference",
         "configFilePaths": [
           "/Users/lakatosmarton/.nuget/NuGet/NuGet.Config"
@@ -127,14 +127,14 @@
         }
       }
     },
-    "/Users/lakatosmarton/Desktop/MartonToolBox/backend/MartonToolBox.Infrastructure/MartonToolBox.Infrastructure.csproj": {
+    "/Users/lakatosmarton/Desktop/MartonToolbox Repo/backend/MartonToolBox.Infrastructure/MartonToolBox.Infrastructure.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "/Users/lakatosmarton/Desktop/MartonToolBox/backend/MartonToolBox.Infrastructure/MartonToolBox.Infrastructure.csproj",
+        "projectUniqueName": "/Users/lakatosmarton/Desktop/MartonToolbox Repo/backend/MartonToolBox.Infrastructure/MartonToolBox.Infrastructure.csproj",
         "projectName": "MartonToolBox.Infrastructure",
-        "projectPath": "/Users/lakatosmarton/Desktop/MartonToolBox/backend/MartonToolBox.Infrastructure/MartonToolBox.Infrastructure.csproj",
+        "projectPath": "/Users/lakatosmarton/Desktop/MartonToolbox Repo/backend/MartonToolBox.Infrastructure/MartonToolBox.Infrastructure.csproj",
         "packagesPath": "/Users/lakatosmarton/.nuget/packages/",
-        "outputPath": "/Users/lakatosmarton/Desktop/MartonToolBox/backend/MartonToolBox.Infrastructure/obj/",
+        "outputPath": "/Users/lakatosmarton/Desktop/MartonToolbox Repo/backend/MartonToolBox.Infrastructure/obj/",
         "projectStyle": "PackageReference",
         "configFilePaths": [
           "/Users/lakatosmarton/.nuget/NuGet/NuGet.Config"
@@ -149,11 +149,11 @@
           "net8.0": {
             "targetAlias": "net8.0",
             "projectReferences": {
-              "/Users/lakatosmarton/Desktop/MartonToolBox/backend/MartonToolBox.Application/MartonToolBox.Application.csproj": {
-                "projectPath": "/Users/lakatosmarton/Desktop/MartonToolBox/backend/MartonToolBox.Application/MartonToolBox.Application.csproj"
+              "/Users/lakatosmarton/Desktop/MartonToolbox Repo/backend/MartonToolBox.Application/MartonToolBox.Application.csproj": {
+                "projectPath": "/Users/lakatosmarton/Desktop/MartonToolbox Repo/backend/MartonToolBox.Application/MartonToolBox.Application.csproj"
               },
-              "/Users/lakatosmarton/Desktop/MartonToolBox/backend/MartonToolBox.Domain/MartonToolBox.Domain.csproj": {
-                "projectPath": "/Users/lakatosmarton/Desktop/MartonToolBox/backend/MartonToolBox.Domain/MartonToolBox.Domain.csproj"
+              "/Users/lakatosmarton/Desktop/MartonToolbox Repo/backend/MartonToolBox.Domain/MartonToolBox.Domain.csproj": {
+                "projectPath": "/Users/lakatosmarton/Desktop/MartonToolbox Repo/backend/MartonToolBox.Domain/MartonToolBox.Domain.csproj"
               }
             }
           }
@@ -182,6 +182,10 @@
               "target": "Package",
               "version": "[8.0.11, )"
             },
+            "Microsoft.Extensions.Http": {
+              "target": "Package",
+              "version": "[8.0.0, )"
+            },
             "Npgsql.EntityFrameworkCore.PostgreSQL": {
               "target": "Package",
               "version": "[8.0.11, )"
@@ -207,14 +211,14 @@
         }
       }
     },
-    "/Users/lakatosmarton/Desktop/MartonToolBox/backend/MartonToolBox.Tests/MartonToolBox.Tests.csproj": {
+    "/Users/lakatosmarton/Desktop/MartonToolbox Repo/backend/MartonToolBox.Tests/MartonToolBox.Tests.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "/Users/lakatosmarton/Desktop/MartonToolBox/backend/MartonToolBox.Tests/MartonToolBox.Tests.csproj",
+        "projectUniqueName": "/Users/lakatosmarton/Desktop/MartonToolbox Repo/backend/MartonToolBox.Tests/MartonToolBox.Tests.csproj",
         "projectName": "MartonToolBox.Tests",
-        "projectPath": "/Users/lakatosmarton/Desktop/MartonToolBox/backend/MartonToolBox.Tests/MartonToolBox.Tests.csproj",
+        "projectPath": "/Users/lakatosmarton/Desktop/MartonToolbox Repo/backend/MartonToolBox.Tests/MartonToolBox.Tests.csproj",
         "packagesPath": "/Users/lakatosmarton/.nuget/packages/",
-        "outputPath": "/Users/lakatosmarton/Desktop/MartonToolBox/backend/MartonToolBox.Tests/obj/",
+        "outputPath": "/Users/lakatosmarton/Desktop/MartonToolbox Repo/backend/MartonToolBox.Tests/obj/",
         "projectStyle": "PackageReference",
         "configFilePaths": [
           "/Users/lakatosmarton/.nuget/NuGet/NuGet.Config"
@@ -229,8 +233,8 @@
           "net8.0": {
             "targetAlias": "net8.0",
             "projectReferences": {
-              "/Users/lakatosmarton/Desktop/MartonToolBox/backend/MartonToolBox.Infrastructure/MartonToolBox.Infrastructure.csproj": {
-                "projectPath": "/Users/lakatosmarton/Desktop/MartonToolBox/backend/MartonToolBox.Infrastructure/MartonToolBox.Infrastructure.csproj"
+              "/Users/lakatosmarton/Desktop/MartonToolbox Repo/backend/MartonToolBox.Infrastructure/MartonToolBox.Infrastructure.csproj": {
+                "projectPath": "/Users/lakatosmarton/Desktop/MartonToolbox Repo/backend/MartonToolBox.Infrastructure/MartonToolBox.Infrastructure.csproj"
               }
             }
           }
