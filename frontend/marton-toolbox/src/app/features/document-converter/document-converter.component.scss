@@ -1,0 +1,29 @@
+.direction {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 15px;
+  color: #2c3b59;
+}
+.direction b {
+  background: var(--brand-soft);
+  color: var(--brand-ink);
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 13px;
+}
+.hint {
+  font-size: 12px;
+  color: #78839a;
+  margin: 0;
+  line-height: 1.5;
+}
+.done {
+  color: var(--success);
+  font-size: 14px;
+  margin: 0;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 8px;
+  padding: 9px 12px;
+}

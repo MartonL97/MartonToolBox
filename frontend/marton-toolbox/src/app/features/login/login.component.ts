@@ -5,22 +5,8 @@ import { AuthService, extractAuthError, safeReturnUrl } from '../../core/auth/au
 @Component({
   standalone: true,
   imports: [RouterLink],
-  template: `<section class="page auth-page"><div class="auth-card">
-    <p class="eyebrow">WELCOME BACK</p>
-    <h1>Log in</h1>
-    <p class="lead">Access your account and license.</p>
-    @if (sessionExpired()) { <p class="error-text">Your session expired. Please log in again.</p> }
-    <form (submit)="submit($event)">
-      <label>Email<input type="email" [value]="email()" (input)="email.set($any($event.target).value)" required></label>
-      <label>Password<input type="password" [value]="password()" (input)="password.set($any($event.target).value)" required></label>
-      @if (error()) { <p class="error-text">{{ error() }}</p> }
-      @if (unconfirmed()) {
-        <button class="secondary" type="button" (click)="resend()" [disabled]="resending() || resent()">{{ resent() ? 'Sent — check your inbox' : resending() ? 'Sending…' : 'Resend confirmation email' }}</button>
-      }
-      <button class="primary" type="submit" [disabled]="loading()">{{ loading() ? 'Logging in…' : 'Log in' }}</button>
-    </form>
-    <p class="auth-switch">No account yet? <a routerLink="/register" queryParamsHandling="preserve">Create one</a></p>
-  </div></section>`
+  templateUrl: './login.component.html',
+  styleUrl: './login.component.scss',
 })
 export class LoginComponent {
   private auth = inject(AuthService);
@@ -54,8 +40,13 @@ export class LoginComponent {
 
   async resend() {
     this.resending.set(true);
-    try { await this.auth.resendConfirmation(this.email()); this.resent.set(true); }
-    catch { /* network error: allow another try */ }
-    finally { this.resending.set(false); }
+    try {
+      await this.auth.resendConfirmation(this.email());
+      this.resent.set(true);
+    } catch {
+      /* network error: allow another try */
+    } finally {
+      this.resending.set(false);
+    }
   }
 }

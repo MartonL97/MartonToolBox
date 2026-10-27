@@ -1,0 +1,54 @@
+<section class="page tool-page">
+  <p class="eyebrow">FILE TOOLS</p>
+  <h1>Document Converter</h1>
+  <p class="lead">Convert PDF to Word, or Word, Excel, and PowerPoint files to PDF.</p>
+
+  <div class="resizer">
+    <div class="controls">
+      <label class="drop-zone compact">
+        <input type="file" [accept]="accept" (change)="choose($event)" />
+        <span class="drop-icon">⇧</span>
+        <strong>{{ file()?.name || 'Choose a document' }}</strong>
+        <small>PDF, DOC/DOCX, XLS/XLSX, PPT/PPTX, ODT, RTF · up to 25 MB</small>
+      </label>
+      @if (conversion(); as c) {
+        <div class="direction">
+          <b>{{ extension().toUpperCase() }}</b>
+          →
+          <b>{{ c.label }}</b>
+        </div>
+      }
+      @if (error()) {
+        <p class="error-text">{{ error() }}</p>
+      }
+      @if (doneName()) {
+        <p class="done">✓ Downloaded {{ doneName() }}</p>
+      }
+      <button class="primary" [disabled]="!conversion() || busy()" (click)="convert()">
+        {{ busy() ? 'Converting…' : 'Convert & download ↓' }}
+      </button>
+      <p class="hint">
+        Unlike the other tools, conversion runs on our server. Your file is deleted right after it's converted and is never stored.
+      </p>
+    </div>
+    <div class="resize-preview">
+      <div class="empty-preview">
+        @if (busy()) {
+          Converting {{ file()?.name }}…
+          <br />
+          Large documents can take up to a minute.
+        } @else if (extension() === 'pdf') {
+          PDF → Word keeps text, paragraphs, and images.
+          <br />
+          Complex layouts may need a little touch-up.
+        } @else if (file()) {
+          Ready to convert to {{ conversion()?.label }}.
+        } @else {
+          Choose a document
+          <br />
+          to convert it.
+        }
+      </div>
+    </div>
+  </div>
+</section>

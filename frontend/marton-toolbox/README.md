@@ -35,5 +35,29 @@ Outputs to `dist/marton-toolbox`.
 ## Test
 
 ```bash
-npm test
+npm test            # run every spec once in headless Chrome (Karma + Jasmine)
+npm run test:watch  # re-run on save, with a browser report
+```
+
+Tests use Google Chrome if installed, otherwise Playwright's Chromium; set `CHROME_BIN` to override.
+Shared test helpers live in `src/testing/` (`render`/`renderAt` set up the router and a mocked HTTP backend).
+
+## Component structure
+
+Every component lives in its own folder as four files:
+
+```
+features/login/
+  login.component.ts       logic (templateUrl / styleUrl point at the files below)
+  login.component.html     template
+  login.component.scss     component styles (shared tokens and layout are in src/styles.scss)
+  login.component.spec.ts  tests
+```
+
+`ng generate component` follows the same layout (SCSS + spec) by default.
+
+## Formatting
+
+```bash
+npm run format      # Prettier for .ts, .html and .scss
 ```

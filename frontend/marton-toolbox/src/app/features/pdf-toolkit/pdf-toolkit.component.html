@@ -1,0 +1,149 @@
+<section class="page tool-page">
+  <p class="eyebrow">FILE TOOLS</p>
+  <h1>PDF Toolkit</h1>
+  <p class="lead">Merge, reorder, rotate, and split PDFs right in your browser. Your files are never uploaded.</p>
+
+  <div class="tabs">
+    <button [class.active]="mode() === 'merge'" (click)="setMode('merge')">Merge</button>
+    <button [class.active]="mode() === 'organize'" (click)="setMode('organize')">Organize pages</button>
+    <button [class.active]="mode() === 'split'" (click)="setMode('split')">Split</button>
+  </div>
+  @if (error()) {
+    <p class="error-text">{{ error() }}</p>
+  }
+
+  @if (mode() === 'merge') {
+    <div class="resizer">
+      <div class="controls">
+        <label class="drop-zone compact">
+          <input type="file" accept="application/pdf,image/jpeg,image/png,image/webp" multiple (change)="addToMerge($event)" />
+          <span class="drop-icon">⇧</span>
+          <strong>Add PDFs or images</strong>
+          <small>JPG, PNG, and WebP become full pages.</small>
+        </label>
+        <p class="hint">Files are combined in the order shown. Use the arrows to reorder.</p>
+        <button class="primary" [disabled]="mergeItems().length < 1 || busy()" (click)="downloadMerged()">
+          {{ busy() ? 'Working…' : 'Download merged PDF ↓' }}
+        </button>
+      </div>
+      <div class="resize-preview">
+        @if (mergeItems().length) {
+          <div class="image-list">
+            @for (item of mergeItems(); track item.id; let i = $index; let last = $last) {
+              <article>
+                <span class="file-badge">{{ item.kind === 'pdf' ? 'PDF' : 'IMG' }}</span>
+                <div>
+                  <strong>{{ item.file.name }}</strong>
+                  <span>{{ item.pages }} {{ item.pages === 1 ? 'page' : 'pages' }}</span>
+                </div>
+                <div class="row-actions">
+                  <button title="Move up" [disabled]="i === 0" (click)="move(mergeItems, i, -1)">↑</button>
+                  <button title="Move down" [disabled]="last" (click)="move(mergeItems, i, 1)">↓</button>
+                  <button title="Remove" (click)="removeItem(item)">×</button>
+                </div>
+              </article>
+            }
+          </div>
+        } @else {
+          <div class="empty-preview">
+            Add two or more PDFs or images
+            <br />
+            to combine them into one PDF.
+          </div>
+        }
+      </div>
+    </div>
+  }
+
+  @if (mode() === 'organize') {
+    <div class="resizer">
+      <div class="controls">
+        <label class="drop-zone compact">
+          <input type="file" accept="application/pdf" (change)="loadForOrganize($event)" />
+          <span class="drop-icon">⇧</span>
+          <strong>{{ sourceFile()?.name || 'Choose a PDF' }}</strong>
+          <small>Reorder, rotate, or delete pages.</small>
+        </label>
+        @if (pages().length) {
+          <p class="hint">{{ pages().length }} of {{ sourcePageCount() }} pages kept.</p>
+          <button class="secondary" (click)="rotateAll(90)">Rotate all ↻</button>
+          <button class="secondary" (click)="resetPages()">Reset changes</button>
+        }
+        <button class="primary" [disabled]="!pages().length || busy()" (click)="downloadOrganized()">
+          {{ busy() ? 'Working…' : 'Download PDF ↓' }}
+        </button>
+      </div>
+      <div class="resize-preview">
+        @if (pages().length) {
+          <div class="page-grid">
+            @for (page of pages(); track page.id; let i = $index; let last = $last) {
+              <div class="page-card">
+                <div class="page-sheet" [style.transform]="'rotate(' + page.rotation + 'deg)'">{{ page.index + 1 }}</div>
+                <small>Position {{ i + 1 }}</small>
+                <div class="row-actions">
+                  <button title="Move earlier" [disabled]="i === 0" (click)="move(pages, i, -1)">←</button>
+                  <button title="Move later" [disabled]="last" (click)="move(pages, i, 1)">→</button>
+                  <button title="Rotate left" (click)="rotate(page, -90)">↺</button>
+                  <button title="Rotate right" (click)="rotate(page, 90)">↻</button>
+                  <button title="Delete page" [disabled]="pages().length === 1" (click)="removePage(page)">×</button>
+                </div>
+              </div>
+            }
+          </div>
+        } @else {
+          <div class="empty-preview">
+            Choose a PDF to see
+            <br />
+            and rearrange its pages.
+          </div>
+        }
+      </div>
+    </div>
+  }
+
+  @if (mode() === 'split') {
+    <div class="resizer">
+      <div class="controls">
+        <label class="drop-zone compact">
+          <input type="file" accept="application/pdf" (change)="loadForSplit($event)" />
+          <span class="drop-icon">⇧</span>
+          <strong>{{ sourceFile()?.name || 'Choose a PDF' }}</strong>
+          <small>Split into separate files.</small>
+        </label>
+        <label class="radio">
+          <input type="radio" name="split" [checked]="splitMode() === 'each'" (change)="splitMode.set('each')" />
+          Every page as its own file
+        </label>
+        <label class="radio">
+          <input type="radio" name="split" [checked]="splitMode() === 'ranges'" (change)="splitMode.set('ranges')" />
+          Custom ranges
+        </label>
+        @if (splitMode() === 'ranges') {
+          <label>
+            Ranges
+            <input type="text" placeholder="e.g. 1-3, 4, 5-8" [value]="ranges()" (input)="ranges.set($any($event.target).value)" />
+          </label>
+          <p class="hint">Each range becomes one file.</p>
+        }
+        <button class="primary" [disabled]="!sourcePageCount() || busy()" (click)="downloadSplit()">
+          {{ busy() ? 'Working…' : 'Download split files ↓' }}
+        </button>
+      </div>
+      <div class="resize-preview">
+        @if (sourcePageCount()) {
+          <div class="empty-preview">
+            <strong>{{ sourcePageCount() }} pages</strong>
+            <br />
+            {{ splitPreview() }}
+          </div>
+        } @else {
+          <div class="empty-preview">
+            Choose a PDF to split it
+            <br />
+            into smaller files.
+          </div>
+        }
+      </div>
+    </div>
+  }
+</section>

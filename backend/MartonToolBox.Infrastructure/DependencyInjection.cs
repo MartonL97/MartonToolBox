@@ -4,6 +4,7 @@ using MartonToolBox.Application.Email;
 using MartonToolBox.Application.Licensing;
 using MartonToolBox.Application.Payments;
 using MartonToolBox.Domain.Entities;
+using MartonToolBox.Infrastructure.Identity;
 using MartonToolBox.Infrastructure.Persistence;
 using MartonToolBox.Infrastructure.Services;
 using Microsoft.AspNetCore.Identity;
@@ -18,8 +19,14 @@ public static class DependencyInjection
     public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
         services.AddDbContext<AppDbContext>(options => options.UseNpgsql(configuration.GetConnectionString("Postgres")));
-        services.AddIdentityCore<AppUser>(options => { options.User.RequireUniqueEmail = true; options.Password.RequiredLength = 8; })
-            .AddRoles<IdentityRole<Guid>>().AddEntityFrameworkStores<AppDbContext>().AddDefaultTokenProviders();
+        services.AddIdentityCore<AppUser>(options =>
+            {
+                options.User.RequireUniqueEmail = true;
+                options.Password.RequiredLength = 8;
+                options.Tokens.PasswordResetTokenProvider = PasswordResetTokenProvider<AppUser>.ProviderName;
+            })
+            .AddRoles<IdentityRole<Guid>>().AddEntityFrameworkStores<AppDbContext>().AddDefaultTokenProviders()
+            .AddTokenProvider<PasswordResetTokenProvider<AppUser>>(PasswordResetTokenProvider<AppUser>.ProviderName);
         services.AddScoped<ICsvService, CsvService>(); services.AddSingleton<IDocumentConverter, LibreOfficeConverter>(); services.AddSingleton<IEmailSender, SmtpEmailSender>(); services.AddScoped<ILicenseService, LicenseService>();
 
         // Registered unconditionally so its notify endpoint works regardless

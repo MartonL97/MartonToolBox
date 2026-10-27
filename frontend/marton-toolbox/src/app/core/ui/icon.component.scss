@@ -1,0 +1,9 @@
+:host {
+  display: inline-flex;
+  width: var(--icon-size, 18px);
+  height: var(--icon-size, 18px);
+  flex-shrink: 0;
+}
+span {
+  display: contents;
+}

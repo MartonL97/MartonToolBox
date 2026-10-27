@@ -1,0 +1,64 @@
+<section class="page tool-page">
+  <p class="eyebrow">IMAGE TOOLS</p>
+  <h1>Image Resizer</h1>
+  <p class="lead">Resize JPG, PNG, and WebP images without sending them anywhere.</p>
+  <div class="resizer">
+    <div class="controls">
+      <label class="drop-zone compact">
+        <input type="file" accept="image/jpeg,image/png,image/webp" multiple (change)="load($event)" />
+        <span class="drop-icon">⇧</span>
+        <strong>Add images</strong>
+        <small>Batch uploads supported.</small>
+      </label>
+      <h3>Dimensions</h3>
+      <div class="input-pair">
+        <label>
+          Width
+          <input type="number" [value]="width()" (input)="changeWidth(+$any($event.target).value)" />
+        </label>
+        <label>
+          Height
+          <input type="number" [value]="height()" (input)="changeHeight(+$any($event.target).value)" />
+        </label>
+      </div>
+      <label class="check">
+        <input type="checkbox" [checked]="locked()" (change)="locked.set($any($event.target).checked)" />
+        Keep aspect ratio
+      </label>
+      <label>
+        Preset
+        <select (change)="preset($any($event.target).value)">
+          <option value="">Custom dimensions</option>
+          @for (p of presetEntries; track p[0]) {
+            <option [value]="p[0]">{{ p[0] }} — {{ p[1][0] }} × {{ p[1][1] }}</option>
+          }
+        </select>
+      </label>
+      <button class="primary" [disabled]="!files().length" (click)="download()">
+        Download {{ files().length || '' }} resized {{ files().length === 1 ? 'image' : 'images' }} ↓
+      </button>
+    </div>
+    <div class="resize-preview">
+      @if (files().length) {
+        <div class="image-list">
+          @for (file of files(); track file.file.name) {
+            <article>
+              <img [src]="file.url" />
+              <div>
+                <strong>{{ file.file.name }}</strong>
+                <span>{{ file.width }} × {{ file.height }} → {{ width() }} × {{ height() }}</span>
+              </div>
+              <button (click)="remove(file)">×</button>
+            </article>
+          }
+        </div>
+      } @else {
+        <div class="empty-preview">
+          Upload one or more images
+          <br />
+          to start resizing.
+        </div>
+      }
+    </div>
+  </div>
+</section>

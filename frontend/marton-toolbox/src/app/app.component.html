@@ -1,0 +1,116 @@
+<div class="shell">
+  <aside>
+    <a class="brand" routerLink="/dashboard">
+      <span class="brand-mark"><mtb-icon name="bolt" /></span>
+      MartonToolBox
+    </a>
+    <nav>
+      <a routerLink="/dashboard" routerLinkActive="active">
+        <mtb-icon name="dashboard" />
+        Dashboard
+      </a>
+      <p>Tools</p>
+      @for (item of nav; track item.path) {
+        <a [routerLink]="item.path" routerLinkActive="active">
+          <mtb-icon [name]="item.icon" />
+          {{ item.label }}
+        </a>
+      }
+      <p>Shop</p>
+      <a routerLink="/shop" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+        <mtb-icon name="bag" />
+        Merch shop
+      </a>
+      <a routerLink="/shop/cart" routerLinkActive="active">
+        <mtb-icon name="cart" />
+        Cart
+        @if (cart.count()) {
+          <span class="nav-badge">{{ cart.count() }}</span>
+        }
+      </a>
+      @if (auth.isAuthenticated()) {
+        <a routerLink="/shop/orders" routerLinkActive="active">
+          <mtb-icon name="package" />
+          My orders
+        </a>
+      }
+      <p>Account</p>
+      <a routerLink="/billing" routerLinkActive="active">
+        <mtb-icon name="card" />
+        Billing
+      </a>
+      @if (auth.isAdmin()) {
+        <a routerLink="/admin" routerLinkActive="active">
+          <mtb-icon name="shield" />
+          Admin
+        </a>
+      }
+    </nav>
+    <div class="privacy">
+      <mtb-icon name="shield" />
+      <div>
+        <strong>Private by design</strong>
+        <span>Most tools run entirely in your browser.</span>
+      </div>
+    </div>
+  </aside>
+  <main>
+    <header>
+      <a class="mobile-brand" routerLink="/dashboard">
+        <span class="brand-mark"><mtb-icon name="bolt" /></span>
+        MartonToolBox
+      </a>
+      <a class="header-cart" routerLink="/shop/cart" title="Cart">
+        <mtb-icon name="cart" />
+        @if (cart.count()) {
+          <span class="nav-badge">{{ cart.count() }}</span>
+        }
+      </a>
+      @if (auth.isAuthenticated()) {
+        <div class="user-menu" (mouseenter)="openMenu()" (mouseleave)="closeMenuSoon()">
+          <button type="button" class="account" (click)="toggleMenu()" [attr.aria-expanded]="menuOpen()" aria-haspopup="menu">
+            <span class="avatar">{{ initial() }}</span>
+            <span class="account-name">{{ auth.user()?.displayName || 'Account' }}</span>
+            <mtb-icon class="chevron" name="chevron" />
+          </button>
+          @if (menuOpen()) {
+            <div class="menu" role="menu">
+              <div class="menu-head">
+                <strong>{{ auth.user()?.displayName }}</strong>
+                <span>{{ auth.user()?.email }}</span>
+              </div>
+              <a role="menuitem" routerLink="/account">
+                <mtb-icon name="user" />
+                Account
+              </a>
+              <a role="menuitem" routerLink="/shop/orders">
+                <mtb-icon name="package" />
+                My orders
+              </a>
+              <a role="menuitem" routerLink="/billing">
+                <mtb-icon name="card" />
+                Billing
+              </a>
+              @if (auth.isAdmin()) {
+                <a role="menuitem" routerLink="/admin">
+                  <mtb-icon name="shield" />
+                  Store admin
+                </a>
+              }
+              <button role="menuitem" type="button" class="menu-logout" (click)="logout()">
+                <mtb-icon name="logout" />
+                Log out
+              </button>
+            </div>
+          }
+        </div>
+      } @else {
+        <a class="account" routerLink="/login">
+          <mtb-icon name="login" />
+          Log in
+        </a>
+      }
+    </header>
+    <router-outlet />
+  </main>
+</div>

@@ -2,15 +2,26 @@ import { Injectable, computed, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 
-export interface AuthUser { id: string; email: string; displayName: string; }
-interface AuthResult { accessToken: string; refreshToken: string; expiresAt: string; user: AuthUser; }
+export interface AuthUser {
+  id: string;
+  email: string;
+  displayName: string;
+}
+interface AuthResult {
+  accessToken: string;
+  refreshToken: string;
+  expiresAt: string;
+  user: AuthUser;
+}
 
 export function extractAuthError(err: any): string {
   const body = err?.error;
   if (!body) return 'Something went wrong. Please try again.';
   if (typeof body.error === 'string') return body.error;
-  if (Array.isArray(body.errors)) return body.errors.map((e: any) => e.description ?? e).join(' ') || 'Please check your details and try again.';
-  if (body.errors && typeof body.errors === 'object') return Object.values(body.errors).flat().join(' ') || 'Please check your details and try again.';
+  if (Array.isArray(body.errors))
+    return body.errors.map((e: any) => e.description ?? e).join(' ') || 'Please check your details and try again.';
+  if (body.errors && typeof body.errors === 'object')
+    return Object.values(body.errors).flat().join(' ') || 'Please check your details and try again.';
   if (typeof body.title === 'string') return body.title;
   return 'Something went wrong. Please try again.';
 }
@@ -24,13 +35,17 @@ export class AuthService {
   /** From /api/account; only used to show admin UI. The backend checks the role on every admin request. */
   readonly isAdmin = signal(false);
 
-  constructor() { if (this.token()) this.refreshProfile(); }
+  constructor() {
+    if (this.token()) this.refreshProfile();
+  }
 
   async refreshProfile() {
     try {
       const res = await firstValueFrom(this.http.get<{ data: { isAdmin: boolean } }>('/api/account'));
       this.isAdmin.set(!!res.data.isAdmin);
-    } catch { this.isAdmin.set(false); }
+    } catch {
+      this.isAdmin.set(false);
+    }
   }
 
   async login(email: string, password: string) {
@@ -40,7 +55,14 @@ export class AuthService {
 
   /** Creates an inactive account and emails a confirmation link; does not sign in. */
   async register(displayName: string, email: string, password: string, confirmPassword: string) {
-    const res = await firstValueFrom(this.http.post<{ data: { email: string; emailSent: boolean } }>('/api/auth/register', { displayName, email, password, confirmPassword }));
+    const res = await firstValueFrom(
+      this.http.post<{ data: { email: string; emailSent: boolean } }>('/api/auth/register', {
+        displayName,
+        email,
+        password,
+        confirmPassword,
+      }),
+    );
     return res.data;
   }
 
@@ -52,6 +74,18 @@ export class AuthService {
 
   async resendConfirmation(email: string) {
     await firstValueFrom(this.http.post('/api/auth/resend-confirmation', { email }));
+  }
+
+  async forgotPassword(email: string) {
+    await firstValueFrom(this.http.post('/api/auth/forgot-password', { email }));
+  }
+
+  /** Sets a new password from the emailed link and signs the user in. */
+  async resetPassword(userId: string, token: string, password: string, confirmPassword: string) {
+    const res = await firstValueFrom(
+      this.http.post<{ data: AuthResult }>('/api/auth/reset-password', { userId, token, password, confirmPassword }),
+    );
+    this.setSession(res.data);
   }
 
   /** Keeps the header/avatar in sync after the user renames themselves on the account page. */

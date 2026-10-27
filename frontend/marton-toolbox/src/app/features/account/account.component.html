@@ -1,0 +1,190 @@
+<section class="page">
+  @if (loading()) {
+    <div class="status-banner">
+      <span class="spinner"></span>
+      <div><h1>Loading your account…</h1></div>
+    </div>
+  }
+  @if (loadError()) {
+    <p class="error-text">{{ loadError() }}</p>
+  }
+
+  @if (account(); as a) {
+    <div class="profile-head">
+      <span class="big-avatar">{{ initial() }}</span>
+      <div>
+        <p class="eyebrow">Your account</p>
+        <h1>{{ a.profile.displayName }}</h1>
+        <p>{{ a.profile.email }} · Member since {{ a.profile.memberSince | date: 'MMMM y' }}</p>
+        <div class="head-badges">
+          <span class="status-pill" [attr.data-status]="a.license ? 'shipped' : 'pending'">
+            {{ a.license ? 'Lifetime license' : 'No license yet' }}
+          </span>
+          @if (a.isAdmin) {
+            <span class="status-pill" data-status="paid">Admin</span>
+          }
+        </div>
+      </div>
+    </div>
+
+    <div class="account-grid">
+      <form class="account-main" (submit)="save($event)">
+        <div class="panel">
+          <h3>
+            <mtb-icon name="shield" />
+            Personal details
+          </h3>
+          <p class="panel-sub">How we address you and reach you about orders.</p>
+          <div class="form-grid">
+            <label>
+              Full name
+              <input autocomplete="name" [value]="form().displayName" (input)="set('displayName', $event)" required />
+            </label>
+            <label>
+              <span class="label-row">
+                Phone
+                <span class="optional">optional</span>
+              </span>
+              <input type="tel" autocomplete="tel" placeholder="07xx xxx xxx" [value]="form().phone" (input)="set('phone', $event)" />
+            </label>
+            <label class="span-2">
+              Email
+              <input class="readonly" [value]="a.profile.email" readonly title="Your email is your login and can't be changed here." />
+            </label>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h3>
+            <mtb-icon name="truck" />
+            Address
+          </h3>
+          <p class="panel-sub">Used to pre-fill the shipping form when you order from the shop.</p>
+          <div class="form-grid">
+            <label class="span-2">
+              <span class="label-row">
+                Street address
+                <span class="optional">optional</span>
+              </span>
+              <input
+                autocomplete="street-address"
+                placeholder="Street, number, building, apartment"
+                [value]="form().address"
+                (input)="set('address', $event)"
+              />
+            </label>
+            <label>
+              <span class="label-row">
+                City
+                <span class="optional">optional</span>
+              </span>
+              <input autocomplete="address-level2" [value]="form().city" (input)="set('city', $event)" />
+            </label>
+            <label>
+              <span class="label-row">
+                County (județ)
+                <span class="optional">optional</span>
+              </span>
+              <input autocomplete="address-level1" [value]="form().county" (input)="set('county', $event)" />
+            </label>
+            <label>
+              <span class="label-row">
+                Postal code
+                <span class="optional">optional</span>
+              </span>
+              <input autocomplete="postal-code" [value]="form().postalCode" (input)="set('postalCode', $event)" />
+            </label>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h3>
+            <mtb-icon name="card" />
+            Company
+            <span class="optional">optional, for invoices</span>
+          </h3>
+          <p class="panel-sub">Fill this in if you buy on behalf of a company.</p>
+          <div class="form-grid">
+            <label>
+              Company name
+              <input autocomplete="organization" [value]="form().companyName" (input)="set('companyName', $event)" />
+            </label>
+            <label>
+              CUI / VAT number
+              <input placeholder="e.g. RO12345678" [value]="form().taxId" (input)="set('taxId', $event)" />
+            </label>
+          </div>
+        </div>
+
+        @if (saveError()) {
+          <p class="error-text">{{ saveError() }}</p>
+        }
+        <div class="save-bar">
+          <button class="primary" type="submit" [disabled]="saving() || !dirty() || form().displayName.trim().length < 2">
+            {{ saving() ? 'Saving…' : 'Save changes' }}
+          </button>
+          @if (saved() && !dirty()) {
+            <span class="saved">
+              <mtb-icon name="check" />
+              Saved
+            </span>
+          } @else if (dirty()) {
+            <span class="hint">You have unsaved changes.</span>
+          }
+        </div>
+      </form>
+
+      <div class="side">
+        <div class="panel">
+          <h3>Profile {{ completeness() }}% complete</h3>
+          <div class="progress"><span [style.width.%]="completeness()"></span></div>
+          @if (missing().length) {
+            <p class="panel-sub" style="margin: 0">Still missing:</p>
+            <ul class="missing">
+              @for (m of missing(); track m) {
+                <li>{{ m }}</li>
+              }
+            </ul>
+          } @else {
+            <p class="panel-sub" style="margin: 0">All set — checkout will be pre-filled.</p>
+          }
+        </div>
+
+        <div class="panel">
+          <h3>
+            <mtb-icon name="bolt" />
+            License
+          </h3>
+          @if (a.license) {
+            <p class="panel-sub" style="margin: 0">{{ a.license.product }} · {{ a.license.status }}</p>
+            <p class="license-key">{{ a.license.licenseKey }}</p>
+          } @else {
+            <p class="panel-sub">Unlock every tool with a one-time payment.</p>
+            <a class="primary block" routerLink="/billing">Unlock all tools</a>
+          }
+        </div>
+
+        <div class="panel links">
+          <a routerLink="/shop/orders">
+            <mtb-icon name="package" />
+            My orders
+          </a>
+          <a routerLink="/shop">
+            <mtb-icon name="bag" />
+            Merch shop
+          </a>
+          @if (a.isAdmin) {
+            <a routerLink="/admin">
+              <mtb-icon name="shield" />
+              Store admin
+            </a>
+          }
+          <button class="secondary logout" style="margin-top: 8px" (click)="logout()">
+            <mtb-icon name="login" />
+            Log out
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+</section>

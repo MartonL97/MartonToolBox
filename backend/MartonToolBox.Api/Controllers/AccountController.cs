@@ -33,7 +33,7 @@ public sealed class AccountController(UserManager<AppUser> users, ILicenseServic
         var user = await users.GetUserAsync(User);
         if (user is null) return Unauthorized();
         var license = await licenses.GetActiveLicenseAsync(user.Id);
-        var licenseDto = license is null ? null : new LicenseDto(license.LicenseKey, license.Product.ToString(), license.Status.ToString(), license.ExpiresAt);
+        var licenseDto = license is null ? null : new LicenseDto(license.LicenseKey, license.Product.ToString(), license.Status.ToString(), license.PurchasedAt, license.ExpiresAt);
         var isAdmin = await users.IsInRoleAsync(user, AdminPolicy.Role);
         return Ok(new ApiResponse<object>(new { user = new UserDto(user.Id, user.Email!, user.DisplayName), license = licenseDto, isAdmin, profile = ToProfile(user) }));
     }

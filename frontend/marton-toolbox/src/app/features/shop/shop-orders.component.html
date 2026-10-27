@@ -1,0 +1,27 @@
+<section class="page">
+  <p class="eyebrow">Shop</p>
+  <h1>My orders</h1>
+  @if (error()) {
+    <p class="error-text">{{ error() }}</p>
+  }
+  @if (loaded() && !orders().length) {
+    <div class="empty-state">
+      <span class="tool-icon"><mtb-icon name="package" /></span>
+      <h3>No orders yet</h3>
+      <a class="primary" routerLink="/shop">Visit the shop</a>
+    </div>
+  }
+  <div class="order-list">
+    @for (o of orders(); track o.id) {
+      <a class="panel order-row" [routerLink]="['/shop/orders', o.id]">
+        <div>
+          <strong>Order {{ o.id.replace('-', '').slice(0, 8).toUpperCase() }}</strong>
+          <span>{{ o.createdAt | date: 'd MMM y, HH:mm' }} · {{ itemCount(o) }} {{ itemCount(o) === 1 ? 'item' : 'items' }}</span>
+        </div>
+        <span class="status-pill" [attr.data-status]="statusKey(o)">{{ statusLabel(o) }}</span>
+        <strong>{{ money(o.amount, o.currency) }}</strong>
+        <mtb-icon name="arrow" />
+      </a>
+    }
+  </div>
+</section>

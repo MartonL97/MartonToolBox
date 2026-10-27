@@ -14,12 +14,12 @@ export const unauthorizedInterceptor: HttpInterceptorFn = (request, next) => {
   const router = inject(Router);
 
   return next(request).pipe(
-    catchError(err => {
+    catchError((err) => {
       if (err?.status === 401 && auth.isAuthenticated()) {
         auth.logout();
         router.navigate(['/login'], { queryParams: { expired: '1' } });
       }
       return throwError(() => err);
-    })
+    }),
   );
 };

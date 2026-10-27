@@ -1,0 +1,189 @@
+<section class="page">
+  <p class="eyebrow">Admin</p>
+  <h1>Store admin</h1>
+  <p class="lead" style="margin-bottom: 22px">Manage shop products, ship orders, and see who has a license.</p>
+  @if (loading() && !loaded()) {
+    <p class="empty-preview">Loading…</p>
+  }
+  @if (error()) {
+    <p class="error-text">{{ error() }}</p>
+  }
+
+  @if (loaded()) {
+    <div class="tabs">
+      <button [class.active]="tab() === 'orders'" (click)="tab.set('orders')">Shop orders ({{ shopOrders().length }})</button>
+      <button [class.active]="tab() === 'products'" (click)="tab.set('products')">Products ({{ products().length }})</button>
+      <button [class.active]="tab() === 'licenses'" (click)="tab.set('licenses')">Active licenses ({{ licenses().length }})</button>
+    </div>
+
+    @if (tab() === 'orders') {
+      <div class="list">
+        @for (o of shopOrders(); track o.order.id) {
+          <div class="panel admin-order">
+            <div>
+              <strong>Order {{ short(o.order.id) }}</strong>
+              <span class="status-pill" [attr.data-status]="o.order.shippedAt ? 'shipped' : o.order.status.toLowerCase()">
+                {{ o.order.shippedAt ? 'Shipped' : o.order.status }}
+              </span>
+              <p class="muted">{{ o.order.createdAt | date: 'd MMM y, HH:mm' }} · {{ o.userEmail }}</p>
+              @for (i of o.order.items; track $index) {
+                <p>
+                  {{ i.quantity }} × {{ i.productName }}
+                  @if (i.size) {
+                    —
+                    <strong>size {{ i.size }}</strong>
+                  }
+                </p>
+              }
+              <p>
+                <strong>{{ money(o.order.amount, o.order.currency) }}</strong>
+                <span class="muted" style="margin-left: 6px">(shipping {{ money(o.order.shippingCost, o.order.currency) }})</span>
+              </p>
+            </div>
+            <div>
+              <strong>Ship to</strong>
+              <p>
+                {{ o.shippingName }} · {{ o.shippingPhone }}
+                <br />
+                {{ o.shippingAddress }}
+                <br />
+                {{ o.shippingPostalCode }} {{ o.shippingCity }}, {{ o.shippingCounty }}
+              </p>
+            </div>
+            <div>
+              @if (o.order.status === 'Paid' && !o.order.shippedAt) {
+                <button class="primary" (click)="ship(o)" [disabled]="busy() === o.order.id">
+                  {{ busy() === o.order.id ? 'Saving…' : 'Mark as shipped' }}
+                </button>
+              } @else if (o.order.shippedAt) {
+                <span class="muted">Shipped {{ o.order.shippedAt | date: 'd MMM y' }}</span>
+              } @else {
+                <span class="muted">Waiting for payment</span>
+              }
+            </div>
+          </div>
+        } @empty {
+          <p class="empty-preview">No shop orders yet.</p>
+        }
+      </div>
+    }
+
+    @if (tab() === 'products') {
+      <form class="panel admin-form" (submit)="saveProduct($event)">
+        <h3 class="span-2">{{ form().id ? 'Edit product' : 'New product' }}</h3>
+        <label>
+          Name
+          <input [value]="form().name" (input)="setForm('name', $event)" required />
+        </label>
+        <label>
+          Slug (URL id)
+          <input [value]="form().slug" (input)="setForm('slug', $event)" placeholder="e.g. coffee-mug" required />
+        </label>
+        <label class="span-2">
+          Description
+          <textarea rows="2" [value]="form().description" (input)="setForm('description', $event)"></textarea>
+        </label>
+        <label>
+          Price (RON)
+          <input type="number" min="0.01" step="0.01" [value]="form().price" (input)="setForm('price', $event)" required />
+        </label>
+        <label>
+          Sizes &amp; stock
+          <input [value]="form().sizesText" (input)="setForm('sizesText', $event)" placeholder="e.g. S:20, M:20, L:20 (empty = no sizes)" />
+        </label>
+        @if (!form().sizesText.trim()) {
+          <label>
+            Stock
+            <input type="number" min="0" step="1" [value]="form().stock" (input)="setForm('stock', $event)" required />
+          </label>
+        }
+        <label>
+          Image (optional)
+          <input [value]="form().imageUrl" (input)="setForm('imageUrl', $event)" placeholder="https://… or /images/shop/photo.jpg" />
+        </label>
+        <label>
+          Sort order
+          <input type="number" step="1" [value]="form().sortOrder" (input)="setForm('sortOrder', $event)" />
+        </label>
+        <label class="inline">
+          <input type="checkbox" [checked]="form().isActive" (change)="setActive($event)" />
+          Visible in shop
+        </label>
+        <div class="form-actions">
+          <button class="primary" type="submit" [disabled]="busy() === 'product'">
+            {{ busy() === 'product' ? 'Saving…' : form().id ? 'Save changes' : 'Add product' }}
+          </button>
+          @if (form().id) {
+            <button class="secondary" type="button" (click)="form.set(emptyProduct())">Cancel</button>
+          }
+        </div>
+      </form>
+      <div class="list" style="margin-top: 16px">
+        @for (p of products(); track p.id) {
+          <div class="panel product-row">
+            <div>
+              <strong>{{ p.name }}</strong>
+              <span class="muted">/{{ p.slug }}</span>
+            </div>
+            <span>{{ money(p.price, p.currency) }}</span>
+            <span class="muted">
+              @if (p.sizes.length) {
+                @for (s of p.sizes; track s.size) {
+                  {{ s.size }}:{{ s.stock }}&nbsp;
+                }
+              } @else {
+                {{ p.stock }} in stock
+              }
+            </span>
+            <span class="status-pill" [attr.data-status]="p.isActive ? 'paid' : 'failed'">{{ p.isActive ? 'Visible' : 'Hidden' }}</span>
+            <div class="row-buttons">
+              @if (confirmDelete() === p.id) {
+                <span class="muted">Delete “{{ p.name }}”?</span>
+                <button class="danger" (click)="deleteProduct(p)" [disabled]="busy() === p.id">
+                  {{ busy() === p.id ? 'Deleting…' : 'Yes, delete' }}
+                </button>
+                <button class="secondary" (click)="confirmDelete.set(null)">Cancel</button>
+              } @else {
+                <button
+                  class="secondary"
+                  (click)="toggleVisible(p)"
+                  [disabled]="busy() === p.id"
+                  [title]="p.isActive ? 'Hide from the shop' : 'Show in the shop'"
+                >
+                  {{ p.isActive ? 'Hide' : 'Show' }}
+                </button>
+                <button class="secondary" (click)="edit(p)">Edit</button>
+                <button class="secondary danger-text" (click)="confirmDelete.set(p.id)">Delete</button>
+              }
+            </div>
+          </div>
+        }
+      </div>
+    }
+
+    @if (tab() === 'licenses') {
+      <div class="list">
+        @for (l of licenses(); track l.licenseKey) {
+          <div class="panel admin-order">
+            <div>
+              <strong>{{ l.displayName }}</strong>
+              <p class="muted">{{ l.userEmail }}</p>
+            </div>
+            <div>
+              <span class="license-key">{{ l.licenseKey }}</span>
+              <p class="muted">
+                {{ l.product }} · since {{ l.purchasedAt | date: 'd MMM y' }}
+                @if (l.expiresAt) {
+                  · expires {{ l.expiresAt | date: 'd MMM y' }}
+                }
+              </p>
+            </div>
+            <span class="status-pill" data-status="shipped">Active</span>
+          </div>
+        } @empty {
+          <p class="empty-preview">No active licenses yet.</p>
+        }
+      </div>
+    }
+  }
+</section>

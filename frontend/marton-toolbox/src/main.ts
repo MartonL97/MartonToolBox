@@ -5,4 +5,9 @@ import { AppComponent } from './app/app.component';
 import { routes } from './app/app.routes';
 import { authInterceptor } from './app/core/auth/auth.interceptor';
 import { unauthorizedInterceptor } from './app/core/auth/unauthorized.interceptor';
-bootstrapApplication(AppComponent, { providers: [provideRouter(routes, withComponentInputBinding()), provideHttpClient(withInterceptors([authInterceptor, unauthorizedInterceptor]))] }).catch(console.error);
+bootstrapApplication(AppComponent, {
+  providers: [
+    provideRouter(routes, withComponentInputBinding()),
+    provideHttpClient(withInterceptors([authInterceptor, unauthorizedInterceptor])),
+  ],
+}).catch(console.error);

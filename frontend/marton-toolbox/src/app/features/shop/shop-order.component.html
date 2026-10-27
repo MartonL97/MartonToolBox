@@ -1,0 +1,77 @@
+<section class="page">
+  <p class="eyebrow">Order {{ shortId() }}</p>
+  @if (order(); as o) {
+    @if (o.status === 'Paid') {
+      <div class="status-banner success">
+        <mtb-icon name="check" />
+        <div>
+          <h1>Thank you for your order!</h1>
+          <p class="lead">
+            Payment received.
+            @if (o.shippedAt) {
+              Your order has shipped.
+            } @else {
+              We'll pack it and ship it soon.
+            }
+          </p>
+        </div>
+      </div>
+    } @else if (o.status === 'Failed') {
+      <div class="status-banner error">
+        <mtb-icon name="cart" />
+        <div>
+          <h1>Payment not completed</h1>
+          <p class="lead">You haven't been charged. Your cart is still saved.</p>
+        </div>
+      </div>
+    } @else {
+      <div class="status-banner">
+        <span class="spinner"></span>
+        <div>
+          <h1>{{ timedOut() ? 'Still waiting for PayU' : 'Confirming your payment…' }}</h1>
+          <p class="lead">This usually takes a few seconds.</p>
+        </div>
+      </div>
+    }
+
+    <div class="panel order-panel">
+      @for (item of o.items; track $index) {
+        <div class="summary-row">
+          <span>
+            {{ item.quantity }} × {{ item.productName }}
+            @if (item.size) {
+              · size {{ item.size }}
+            }
+          </span>
+          <span>{{ money(item.unitPrice * item.quantity, o.currency) }}</span>
+        </div>
+      }
+      <div class="summary-row">
+        <span>Shipping</span>
+        <span>{{ o.shippingCost === 0 ? 'Free' : money(o.shippingCost, o.currency) }}</span>
+      </div>
+      <div class="summary-row total">
+        <span>Total</span>
+        <span>{{ money(o.amount, o.currency) }}</span>
+      </div>
+    </div>
+
+    <div class="actions">
+      @if (o.status === 'Failed') {
+        <a class="primary" routerLink="/shop/cart">Back to cart</a>
+      }
+      @if (o.status === 'Pending' && timedOut()) {
+        <button class="primary" (click)="retry()">Check again</button>
+      }
+      <a class="secondary" routerLink="/shop/orders">My orders</a>
+      <a class="secondary" routerLink="/shop">Continue shopping</a>
+    </div>
+  } @else if (error()) {
+    <p class="error-text">{{ error() }}</p>
+  } @else {
+    <div class="status-banner">
+      <span class="spinner"></span>
+      <div><h1>Loading your order…</h1></div>
+    </div>
+  }
+</section>

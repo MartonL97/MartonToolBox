@@ -1,0 +1,69 @@
+<section class="page tool-page">
+  <p class="eyebrow">FILE TOOLS</p>
+  <h1>CSV Cleaner</h1>
+  <p class="lead">Clean and organize CSV files right in your browser.</p>
+  @if (!file()) {
+    <label class="drop-zone">
+      <input type="file" accept=".csv,text/csv" (change)="load($event)" />
+      <span class="drop-icon">⇧</span>
+      <strong>Drag & drop a CSV here</strong>
+      <span>or choose a file from your computer</span>
+      <b>Choose file</b>
+      <small>CSV files up to 10 MB. Nothing is uploaded.</small>
+    </label>
+  } @else {
+    <div class="stats">
+      @for (stat of stats(); track stat.label) {
+        <div>
+          <span>{{ stat.label }}</span>
+          <strong>{{ stat.value }}</strong>
+        </div>
+      }
+    </div>
+    <div class="workspace">
+      <div class="controls">
+        <h3>Cleaning options</h3>
+        <label>
+          <input type="checkbox" [checked]="dedupe()" (change)="dedupe.set($any($event.target).checked)" />
+          Remove duplicate rows
+        </label>
+        <label>
+          <input type="checkbox" [checked]="empty()" (change)="empty.set($any($event.target).checked)" />
+          Remove empty rows
+        </label>
+        <label>
+          <input type="checkbox" [checked]="trim()" (change)="trim.set($any($event.target).checked)" />
+          Trim whitespace
+        </label>
+        <button class="secondary" (click)="file.set(null)">Choose another file</button>
+        <button class="primary" (click)="download()">Download cleaned CSV ↓</button>
+      </div>
+      <div class="preview">
+        <h3>
+          Preview
+          <small>first {{ Math.min(rows().length, 8) }} rows</small>
+        </h3>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                @for (h of headers(); track h) {
+                  <th>{{ h }}</th>
+                }
+              </tr>
+            </thead>
+            <tbody>
+              @for (r of rows().slice(0, 8); track $index) {
+                <tr>
+                  @for (c of r; track $index) {
+                    <td>{{ c }}</td>
+                  }
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  }
+</section>

@@ -1,4 +1,75 @@
 import { Component, signal } from '@angular/core';
-@Component({standalone:true, template:`<section class="page tool-page"><p class="eyebrow">FILE TOOLS</p><h1>CSV Cleaner</h1><p class="lead">Clean and organize CSV files right in your browser.</p>@if (!file()) {<label class="drop-zone"><input type="file" accept=".csv,text/csv" (change)="load($event)"><span class="drop-icon">⇧</span><strong>Drag & drop a CSV here</strong><span>or choose a file from your computer</span><b>Choose file</b><small>CSV files up to 10 MB. Nothing is uploaded.</small></label>} @else {<div class="stats">@for (stat of stats(); track stat.label) {<div><span>{{stat.label}}</span><strong>{{stat.value}}</strong></div>}</div><div class="workspace"><div class="controls"><h3>Cleaning options</h3><label><input type="checkbox" [checked]="dedupe()" (change)="dedupe.set($any($event.target).checked)"> Remove duplicate rows</label><label><input type="checkbox" [checked]="empty()" (change)="empty.set($any($event.target).checked)"> Remove empty rows</label><label><input type="checkbox" [checked]="trim()" (change)="trim.set($any($event.target).checked)"> Trim whitespace</label><button class="secondary" (click)="file.set(null)">Choose another file</button><button class="primary" (click)="download()">Download cleaned CSV ↓</button></div><div class="preview"><h3>Preview <small>first {{Math.min(rows().length, 8)}} rows</small></h3><div class="table-wrap"><table><thead><tr>@for(h of headers();track h){<th>{{h}}</th>}</tr></thead><tbody>@for(r of rows().slice(0,8);track $index){<tr>@for(c of r;track $index){<td>{{c}}</td>}</tr>}</tbody></table></div></div></div>}</section>`})
-export class CsvCleanerComponent { Math=Math; file=signal<File|null>(null); headers=signal<string[]>([]); rows=signal<string[][]>([]); dedupe=signal(true); empty=signal(true); trim=signal(true); stats=()=>[{label:'Rows',value:this.rows().length},{label:'Columns',value:this.headers().length},{label:'Duplicates',value:this.duplicates()},{label:'Empty rows',value:this.rows().filter(r=>r.every(x=>!x.trim())).length}]; load(e:Event){const f=(e.target as HTMLInputElement).files?.[0];if(!f)return;this.file.set(f);f.text().then(t=>{const all=t.trimEnd().split(/\r?\n/).map(parse);this.headers.set(all.shift()||[]);this.rows.set(all);});} duplicates(){const seen=new Set<string>();return this.rows().filter(r=>{const k=r.join('\u001f');if(seen.has(k))return true;seen.add(k);return false;}).length;} download(){let rows=this.rows();if(this.empty())rows=rows.filter(r=>r.some(x=>x.trim()));if(this.trim())rows=rows.map(r=>r.map(x=>x.trim()));if(this.dedupe()){const s=new Set<string>();rows=rows.filter(r=>!s.has(r.join('\u001f'))&&!!s.add(r.join('\u001f')));}const csv=[this.headers(),...rows].map(r=>r.map(escapeCsv).join(',')).join('\n');save(new Blob([csv],{type:'text/csv'}),'cleaned.csv');} }
-function parse(line:string){const out:string[]=[];let v='',q=false;for(let i=0;i<line.length;i++){const c=line[i];if(c==='"'&&line[i+1]==='"'){v+='"';i++;}else if(c==='"')q=!q;else if(c===','&&!q){out.push(v);v='';}else v+=c;}out.push(v);return out;} function escapeCsv(v:string){return /[",\n]/.test(v)?`"${v.replaceAll('"','""')}"`:v;} function save(blob:Blob,name:string){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;a.click();URL.revokeObjectURL(a.href);}
+@Component({ standalone: true, templateUrl: './csv-cleaner.component.html', styleUrl: './csv-cleaner.component.scss' })
+export class CsvCleanerComponent {
+  Math = Math;
+  file = signal<File | null>(null);
+  headers = signal<string[]>([]);
+  rows = signal<string[][]>([]);
+  dedupe = signal(true);
+  empty = signal(true);
+  trim = signal(true);
+  stats = () => [
+    { label: 'Rows', value: this.rows().length },
+    { label: 'Columns', value: this.headers().length },
+    { label: 'Duplicates', value: this.duplicates() },
+    { label: 'Empty rows', value: this.rows().filter((r) => r.every((x) => !x.trim())).length },
+  ];
+  load(e: Event) {
+    const f = (e.target as HTMLInputElement).files?.[0];
+    if (!f) return;
+    this.file.set(f);
+    f.text().then((t) => {
+      const all = t.trimEnd().split(/\r?\n/).map(parse);
+      this.headers.set(all.shift() || []);
+      this.rows.set(all);
+    });
+  }
+  duplicates() {
+    const seen = new Set<string>();
+    return this.rows().filter((r) => {
+      const k = r.join('\u001f');
+      if (seen.has(k)) return true;
+      seen.add(k);
+      return false;
+    }).length;
+  }
+  download() {
+    let rows = this.rows();
+    if (this.empty()) rows = rows.filter((r) => r.some((x) => x.trim()));
+    if (this.trim()) rows = rows.map((r) => r.map((x) => x.trim()));
+    if (this.dedupe()) {
+      const s = new Set<string>();
+      rows = rows.filter((r) => !s.has(r.join('\u001f')) && !!s.add(r.join('\u001f')));
+    }
+    const csv = [this.headers(), ...rows].map((r) => r.map(escapeCsv).join(',')).join('\n');
+    save(new Blob([csv], { type: 'text/csv' }), 'cleaned.csv');
+  }
+}
+function parse(line: string) {
+  const out: string[] = [];
+  let v = '',
+    q = false;
+  for (let i = 0; i < line.length; i++) {
+    const c = line[i];
+    if (c === '"' && line[i + 1] === '"') {
+      v += '"';
+      i++;
+    } else if (c === '"') q = !q;
+    else if (c === ',' && !q) {
+      out.push(v);
+      v = '';
+    } else v += c;
+  }
+  out.push(v);
+  return out;
+}
+function escapeCsv(v: string) {
+  return /[",\n]/.test(v) ? `"${v.replaceAll('"', '""')}"` : v;
+}
+function save(blob: Blob, name: string) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = name;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}

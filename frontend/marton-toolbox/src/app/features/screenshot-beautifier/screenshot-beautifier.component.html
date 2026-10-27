@@ -1,0 +1,58 @@
+<section class="page tool-page">
+  <p class="eyebrow">IMAGE TOOLS</p>
+  <h1>Screenshot Beautifier</h1>
+  <p class="lead">Make a screenshot ready to share in a few thoughtful touches.</p>
+  <div class="beautifier">
+    <div class="controls">
+      @if (!image()) {
+        <label class="drop-zone compact">
+          <input type="file" accept="image/*" (change)="load($event)" />
+          <span class="drop-icon">⇧</span>
+          <strong>Upload a screenshot</strong>
+          <small>Processed locally in your browser.</small>
+        </label>
+      } @else {
+        <h3>Style</h3>
+        <label>
+          Background
+          <input type="color" [value]="background()" (input)="set('background', $any($event.target).value)" />
+        </label>
+        <label>
+          Padding
+          <output>{{ padding() }} px</output>
+          <input type="range" min="0" max="180" [value]="padding()" (input)="set('padding', +$any($event.target).value)" />
+        </label>
+        <label>
+          Corner radius
+          <output>{{ radius() }} px</output>
+          <input type="range" min="0" max="80" [value]="radius()" (input)="set('radius', +$any($event.target).value)" />
+        </label>
+        <label>
+          Rotation
+          <output>{{ rotation() }}°</output>
+          <input type="range" min="-10" max="10" [value]="rotation()" (input)="set('rotation', +$any($event.target).value)" />
+        </label>
+        <label>
+          <input type="checkbox" [checked]="frame()" (change)="set('frame', $any($event.target).checked)" />
+          Browser frame
+        </label>
+        <label>
+          Title
+          <input type="text" [value]="title()" (input)="set('title', $any($event.target).value)" placeholder="Optional title" />
+        </label>
+        <button class="primary" (click)="export()">Export PNG ↓</button>
+      }
+    </div>
+    <div class="canvas-panel">
+      @if (image()) {
+        <canvas #canvas width="1200" height="800"></canvas>
+      } @else {
+        <div class="empty-preview">
+          Your polished screenshot
+          <br />
+          will appear here.
+        </div>
+      }
+    </div>
+  </div>
+</section>

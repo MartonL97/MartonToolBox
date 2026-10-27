@@ -1,0 +1,22 @@
+<section class="page tool-page">
+  <p class="eyebrow">PAYMENT STATUS</p>
+  @if (status() === 'checking') {
+    <h1>Waiting for confirmation…</h1>
+    <p class="lead">We'll unlock your account automatically once the payment is confirmed.</p>
+  }
+  @if (status() === 'completed') {
+    <h1>Payment successful</h1>
+    <p class="lead">Your license is active. Enjoy the toolbox.</p>
+    <a class="primary" routerLink="/dashboard">Go to dashboard</a>
+  }
+  @if (status() === 'failed') {
+    <h1>Payment not successful</h1>
+    <p class="lead">The payment wasn't completed, so your account hasn't been charged or unlocked.</p>
+    <a class="primary" routerLink="/billing">Try again</a>
+  }
+  @if (status() === 'timeout') {
+    <h1>Still waiting</h1>
+    <p class="lead">Confirmation can take a little while. Check back later, or try again now.</p>
+    <button class="secondary" (click)="retry()">Check again</button>
+  }
+</section>

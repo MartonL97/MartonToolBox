@@ -1,5 +1,80 @@
-import { Component, signal } from '@angular/core'; import JSZip from 'jszip';
-const presets={"Instagram Square":[1080,1080],"Instagram Portrait":[1080,1350],"LinkedIn Post":[1200,627],"X / Twitter Post":[1600,900],"Facebook Post":[1200,630],"YouTube Thumbnail":[1280,720]};
-@Component({standalone:true, template:`<section class="page tool-page"><p class="eyebrow">IMAGE TOOLS</p><h1>Image Resizer</h1><p class="lead">Resize JPG, PNG, and WebP images without sending them anywhere.</p><div class="resizer"><div class="controls"><label class="drop-zone compact"><input type="file" accept="image/jpeg,image/png,image/webp" multiple (change)="load($event)"><span class="drop-icon">⇧</span><strong>Add images</strong><small>Batch uploads supported.</small></label><h3>Dimensions</h3><div class="input-pair"><label>Width<input type="number" [value]="width()" (input)="changeWidth(+$any($event.target).value)"></label><label>Height<input type="number" [value]="height()" (input)="changeHeight(+$any($event.target).value)"></label></div><label class="check"><input type="checkbox" [checked]="locked()" (change)="locked.set($any($event.target).checked)"> Keep aspect ratio</label><label>Preset<select (change)="preset($any($event.target).value)"><option value="">Custom dimensions</option>@for(p of presetEntries;track p[0]){<option [value]="p[0]">{{p[0]}} — {{p[1][0]}} × {{p[1][1]}}</option>}</select></label><button class="primary" [disabled]="!files().length" (click)="download()">Download {{files().length || ''}} resized {{files().length===1?'image':'images'}} ↓</button></div><div class="resize-preview">@if(files().length){<div class="image-list">@for(file of files();track file.file.name){<article><img [src]="file.url"><div><strong>{{file.file.name}}</strong><span>{{file.width}} × {{file.height}} → {{width()}} × {{height()}}</span></div><button (click)="remove(file)">×</button></article>}</div>}@else{<div class="empty-preview">Upload one or more images<br>to start resizing.</div>}</div></div></section>`})
-export class ImageResizerComponent { files=signal<{file:File,url:string,width:number,height:number}[]>([]); width=signal(1080);height=signal(1080);locked=signal(true);ratio=1;presetEntries=Object.entries(presets); load(e:Event){for(const file of Array.from((e.target as HTMLInputElement).files||[])){const url=URL.createObjectURL(file),img=new Image();img.onload=()=>{this.files.update(x=>[...x,{file,url,width:img.width,height:img.height}]);if(this.files().length===1){this.ratio=img.width/img.height;this.width.set(img.width);this.height.set(img.height);}};img.src=url;}} changeWidth(v:number){this.width.set(v);if(this.locked())this.height.set(Math.round(v/this.ratio));}changeHeight(v:number){this.height.set(v);if(this.locked())this.width.set(Math.round(v*this.ratio));}preset(name:string){if(!name)return;const [w,h]=presets[name as keyof typeof presets];this.width.set(w);this.height.set(h);}remove(item:any){URL.revokeObjectURL(item.url);this.files.update(x=>x.filter(y=>y!==item));}async download(){const zip=new JSZip(),w=this.width(),h=this.height();for(const item of this.files()){zip.file(item.file.name.replace(/\.[^.]+$/,'')+`-${w}x${h}.png`,await resizeBlob(item.file,w,h));}const archive=await zip.generateAsync({type:'blob'});const a=document.createElement('a');a.href=URL.createObjectURL(archive);a.download='marton-toolbox-resized-images.zip';a.click();URL.revokeObjectURL(a.href);} }
-function resizeBlob(file:File,w:number,h:number):Promise<Blob>{return new Promise((resolve,reject)=>{const img=new Image();img.onload=()=>{const c=document.createElement('canvas');c.width=w;c.height=h;c.getContext('2d')!.drawImage(img,0,0,w,h);c.toBlob(b=>b?resolve(b):reject(new Error('Could not create resized image.')),'image/png');};img.onerror=()=>reject(new Error('Could not read image.'));img.src=URL.createObjectURL(file);});}
+import { Component, signal } from '@angular/core';
+import JSZip from 'jszip';
+const presets = {
+  'Instagram Square': [1080, 1080],
+  'Instagram Portrait': [1080, 1350],
+  'LinkedIn Post': [1200, 627],
+  'X / Twitter Post': [1600, 900],
+  'Facebook Post': [1200, 630],
+  'YouTube Thumbnail': [1280, 720],
+};
+@Component({ standalone: true, templateUrl: './image-resizer.component.html', styleUrl: './image-resizer.component.scss' })
+export class ImageResizerComponent {
+  files = signal<{ file: File; url: string; width: number; height: number }[]>([]);
+  width = signal(1080);
+  height = signal(1080);
+  locked = signal(true);
+  ratio = 1;
+  presetEntries = Object.entries(presets);
+  load(e: Event) {
+    for (const file of Array.from((e.target as HTMLInputElement).files || [])) {
+      const url = URL.createObjectURL(file),
+        img = new Image();
+      img.onload = () => {
+        this.files.update((x) => [...x, { file, url, width: img.width, height: img.height }]);
+        if (this.files().length === 1) {
+          this.ratio = img.width / img.height;
+          this.width.set(img.width);
+          this.height.set(img.height);
+        }
+      };
+      img.src = url;
+    }
+  }
+  changeWidth(v: number) {
+    this.width.set(v);
+    if (this.locked()) this.height.set(Math.round(v / this.ratio));
+  }
+  changeHeight(v: number) {
+    this.height.set(v);
+    if (this.locked()) this.width.set(Math.round(v * this.ratio));
+  }
+  preset(name: string) {
+    if (!name) return;
+    const [w, h] = presets[name as keyof typeof presets];
+    this.width.set(w);
+    this.height.set(h);
+  }
+  remove(item: any) {
+    URL.revokeObjectURL(item.url);
+    this.files.update((x) => x.filter((y) => y !== item));
+  }
+  async download() {
+    const zip = new JSZip(),
+      w = this.width(),
+      h = this.height();
+    for (const item of this.files()) {
+      zip.file(item.file.name.replace(/\.[^.]+$/, '') + `-${w}x${h}.png`, await resizeBlob(item.file, w, h));
+    }
+    const archive = await zip.generateAsync({ type: 'blob' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(archive);
+    a.download = 'marton-toolbox-resized-images.zip';
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }
+}
+function resizeBlob(file: File, w: number, h: number): Promise<Blob> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      const c = document.createElement('canvas');
+      c.width = w;
+      c.height = h;
+      c.getContext('2d')!.drawImage(img, 0, 0, w, h);
+      c.toBlob((b) => (b ? resolve(b) : reject(new Error('Could not create resized image.'))), 'image/png');
+    };
+    img.onerror = () => reject(new Error('Could not read image.'));
+    img.src = URL.createObjectURL(file);
+  });
+}

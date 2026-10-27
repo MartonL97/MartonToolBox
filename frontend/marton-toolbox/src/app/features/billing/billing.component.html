@@ -1,0 +1,59 @@
+<section class="page tool-page">
+  @if (checking()) {
+    <div class="status-banner">
+      <span class="spinner"></span>
+      <div><h1>Checking your license…</h1></div>
+    </div>
+  } @else {
+    @if (license(); as l) {
+      <p class="eyebrow">YOUR LICENSE</p>
+      <h1>You're all set</h1>
+      <p class="lead">Your lifetime license is active — every tool is unlocked for your account.</p>
+
+      <div class="license-card">
+        <div class="license-top">
+          <span class="license-icon"><mtb-icon name="bolt" /></span>
+          <div>
+            <strong>{{ l.product }} license</strong>
+            <span>
+              Active since {{ l.purchasedAt | date: 'd MMMM y' }}
+              @if (l.expiresAt) {
+                · expires {{ l.expiresAt | date: 'd MMMM y' }}
+              } @else {
+                · never expires
+              }
+            </span>
+          </div>
+          <span class="status-pill" data-status="shipped">
+            <mtb-icon name="check" />
+            {{ l.status }}
+          </span>
+        </div>
+        <div class="license-key-row">
+          <code class="license-key">{{ l.licenseKey }}</code>
+          <button type="button" class="secondary" (click)="copyKey()">
+            @if (copied()) {
+              <mtb-icon name="check" />
+              Copied
+            } @else {
+              Copy key
+            }
+          </button>
+        </div>
+      </div>
+
+      <div class="actions">
+        <a class="primary" routerLink="/dashboard">Go to your tools</a>
+        <a class="secondary" routerLink="/account">Account</a>
+      </div>
+    } @else {
+      <p class="eyebrow">UNLOCK MARTONTOOLBOX</p>
+      <h1>One-time payment, lifetime access</h1>
+      <p class="lead">A single one-time payment unlocks every tool for your account, for good.</p>
+      @if (error()) {
+        <p class="error-text">{{ error() }}</p>
+      }
+      <button class="primary" (click)="startCheckout()" [disabled]="loading()">{{ loading() ? 'Opening payment…' : 'Pay now' }}</button>
+    }
+  }
+</section>

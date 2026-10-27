@@ -1,0 +1,81 @@
+// Page-specific styles. Shared design tokens and layout live in src/styles.scss.
+
+.license-card {
+  max-width: 640px;
+  margin-top: 26px;
+  padding: 24px;
+  border-radius: var(--radius-lg);
+  border: 1px solid #c7d2fe;
+  background: radial-gradient(420px 160px at 100% 0%, rgba(124, 58, 237, 0.1), transparent 70%), var(--surface);
+  box-shadow: var(--shadow-md);
+}
+
+.license-top {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+
+  div {
+    display: grid;
+    gap: 3px;
+    flex: 1;
+    min-width: 0;
+  }
+
+  div > strong {
+    font: 700 17px var(--display);
+  }
+
+  // Only the text column: the icon badge and status pill are spans too.
+  div > span {
+    font-size: 13.5px;
+    color: var(--text-2);
+  }
+
+  .status-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    --icon-size: 14px;
+  }
+}
+
+.license-icon {
+  width: 46px;
+  height: 46px;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  color: #fff;
+  background: var(--gradient);
+  --icon-size: 22px;
+  box-shadow: 0 10px 22px -10px rgba(79, 70, 229, 0.9);
+}
+
+.license-key-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-top: 20px;
+  flex-wrap: wrap;
+
+  .secondary {
+    --icon-size: 15px;
+    min-width: 108px;
+  }
+}
+
+.license-key {
+  flex: 1;
+  min-width: 0;
+  padding: 11px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 14px;
+  letter-spacing: 0.02em;
+  word-break: break-all;
+  user-select: all;
+}
