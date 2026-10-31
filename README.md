@@ -1,6 +1,6 @@
 # MartonToolBox
 
-MartonToolBox is a privacy-friendly collection of business utilities built as a modular ASP.NET Core API and Angular application. The first release includes a dashboard, authentication foundation, tool registry, CSV Cleaner, Screenshot Beautifier, and Image Resizer.
+MartonToolBox is a privacy-friendly collection of business utilities built as a modular ASP.NET Core API and Angular application. The first release includes a dashboard, authentication foundation, tool registry, CSV Cleaner, Image Resizer, PDF Toolkit, and Document Converter.
 
 ## Quick start
 

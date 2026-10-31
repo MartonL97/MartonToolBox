@@ -44,12 +44,6 @@ export const routes: Routes = [
     loadComponent: () => import('./features/csv-cleaner/csv-cleaner.component').then((m) => m.CsvCleanerComponent),
   },
   {
-    path: 'tools/screenshot-beautifier',
-    canActivate: [authGuard, licenseGuard],
-    loadComponent: () =>
-      import('./features/screenshot-beautifier/screenshot-beautifier.component').then((m) => m.ScreenshotBeautifierComponent),
-  },
-  {
     path: 'tools/image-resizer',
     canActivate: [authGuard, licenseGuard],
     loadComponent: () => import('./features/image-resizer/image-resizer.component').then((m) => m.ImageResizerComponent),

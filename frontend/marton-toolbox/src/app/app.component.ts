@@ -6,7 +6,6 @@ import { IconComponent } from './core/ui/icon.component';
 
 const NAV = [
   { path: '/tools/csv-cleaner', label: 'CSV Cleaner', icon: 'table' },
-  { path: '/tools/screenshot-beautifier', label: 'Screenshot Beautifier', icon: 'sparkles' },
   { path: '/tools/image-resizer', label: 'Image Resizer', icon: 'image' },
   { path: '/tools/pdf-toolkit', label: 'PDF Toolkit', icon: 'file' },
   { path: '/tools/document-converter', label: 'Document Converter', icon: 'convert' },

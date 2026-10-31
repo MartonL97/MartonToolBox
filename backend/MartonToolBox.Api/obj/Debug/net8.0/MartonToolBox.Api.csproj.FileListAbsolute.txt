@@ -259,3 +259,10 @@
 /Users/lakatosmarton/Desktop/MartonToolbox Repo/backend/MartonToolBox.Api/bin/Debug/net8.0/BouncyCastle.Cryptography.dll
 /Users/lakatosmarton/Desktop/MartonToolbox Repo/backend/MartonToolBox.Api/bin/Debug/net8.0/MailKit.dll
 /Users/lakatosmarton/Desktop/MartonToolbox Repo/backend/MartonToolBox.Api/bin/Debug/net8.0/MimeKit.dll
+/private/tmp/claude-501/-Users-lakatosmarton-Desktop-MartonToolbox-Repo/a57abc7d-0873-423b-aee6-24684260cdda/scratchpad/apibuild/appsettings.json
+/private/tmp/claude-501/-Users-lakatosmarton-Desktop-MartonToolbox-Repo/a57abc7d-0873-423b-aee6-24684260cdda/scratchpad/apibuild/appsettings.Local.json
+/private/tmp/claude-501/-Users-lakatosmarton-Desktop-MartonToolbox-Repo/a57abc7d-0873-423b-aee6-24684260cdda/scratchpad/apibuild/MartonToolBox.Api
+/private/tmp/claude-501/-Users-lakatosmarton-Desktop-MartonToolbox-Repo/a57abc7d-0873-423b-aee6-24684260cdda/scratchpad/apibuild/MartonToolBox.Api.deps.json
+/private/tmp/claude-501/-Users-lakatosmarton-Desktop-MartonToolbox-Repo/a57abc7d-0873-423b-aee6-24684260cdda/scratchpad/apibuild/MartonToolBox.Api.runtimeconfig.json
+/private/tmp/claude-501/-Users-lakatosmarton-Desktop-MartonToolbox-Repo/a57abc7d-0873-423b-aee6-24684260cdda/scratchpad/apibuild/MartonToolBox.Api.dll
+/private/tmp/claude-501/-Users-lakatosmarton-Desktop-MartonToolbox-Repo/a57abc7d-0873-423b-aee6-24684260cdda/scratchpad/apibuild/MartonToolBox.Api.pdb

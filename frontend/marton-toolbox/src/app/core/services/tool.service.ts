@@ -12,14 +12,6 @@ const fallback: Tool[] = [
     sortOrder: 1,
   },
   {
-    slug: 'screenshot-beautifier',
-    name: 'Screenshot Beautifier',
-    description: 'Turn ordinary screenshots into polished visuals.',
-    category: 'Image Tools',
-    icon: '✦',
-    sortOrder: 2,
-  },
-  {
     slug: 'image-resizer',
     name: 'Image Resizer',
     description: 'Resize images for every social platform.',

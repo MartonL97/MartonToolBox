@@ -9,7 +9,6 @@ Standalone Angular 19 application providing the UI and browser-side tool impleme
 - `src/app/features/login`, `register`, `account` — authentication flows.
 - `src/app/features/csv-cleaner` — client-side CSV cleaning tool.
 - `src/app/features/image-resizer` — client-side image resizing tool.
-- `src/app/features/screenshot-beautifier` — client-side screenshot beautifier tool.
 
 All three implemented tools process files locally in the browser; nothing is uploaded except through the optional CSV server-side route reserved for future large-file processing.
 

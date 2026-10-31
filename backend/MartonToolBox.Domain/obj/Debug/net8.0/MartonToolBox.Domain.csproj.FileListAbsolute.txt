@@ -21,3 +21,6 @@
 /Users/lakatosmarton/Desktop/MartonToolbox Repo/backend/MartonToolBox.Domain/obj/Debug/net8.0/refint/MartonToolBox.Domain.dll
 /Users/lakatosmarton/Desktop/MartonToolbox Repo/backend/MartonToolBox.Domain/obj/Debug/net8.0/MartonToolBox.Domain.pdb
 /Users/lakatosmarton/Desktop/MartonToolbox Repo/backend/MartonToolBox.Domain/obj/Debug/net8.0/ref/MartonToolBox.Domain.dll
+/private/tmp/claude-501/-Users-lakatosmarton-Desktop-MartonToolbox-Repo/a57abc7d-0873-423b-aee6-24684260cdda/scratchpad/apibuild/MartonToolBox.Domain.deps.json
+/private/tmp/claude-501/-Users-lakatosmarton-Desktop-MartonToolbox-Repo/a57abc7d-0873-423b-aee6-24684260cdda/scratchpad/apibuild/MartonToolBox.Domain.dll
+/private/tmp/claude-501/-Users-lakatosmarton-Desktop-MartonToolbox-Repo/a57abc7d-0873-423b-aee6-24684260cdda/scratchpad/apibuild/MartonToolBox.Domain.pdb

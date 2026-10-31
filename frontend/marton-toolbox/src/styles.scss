@@ -865,7 +865,6 @@ h3 {
 .stats div,
 .controls,
 .preview,
-.canvas-panel,
 .resize-preview {
   background: var(--surface);
   border: 1px solid var(--border);
@@ -888,13 +887,11 @@ h3 {
   letter-spacing: -0.02em;
 }
 .workspace,
-.beautifier,
 .resizer {
   display: grid;
   grid-template-columns: 320px 1fr;
   gap: 18px;
 }
-.beautifier,
 .resizer {
   margin-top: 28px;
 }
@@ -1069,7 +1066,6 @@ tbody tr:hover td {
 tr:last-child td {
   border-bottom: 0;
 }
-.canvas-panel,
 .resize-preview {
   min-height: 520px;
   display: flex;
@@ -1077,14 +1073,6 @@ tr:last-child td {
   justify-content: center;
   padding: 20px;
   overflow: hidden;
-}
-.canvas-panel {
-  background: repeating-conic-gradient(#f3f4f8 0 25%, #fff 0 50%) 0 0 / 22px 22px;
-}
-.canvas-panel canvas {
-  max-width: 100%;
-  height: auto;
-  border-radius: 8px;
 }
 .empty-preview {
   color: var(--text-3);
@@ -1961,11 +1949,9 @@ tr:last-child td {
     grid-template-columns: 1fr 1fr;
   }
   .workspace,
-  .beautifier,
   .resizer {
     grid-template-columns: 1fr;
   }
-  .canvas-panel,
   .resize-preview {
     min-height: 300px;
   }

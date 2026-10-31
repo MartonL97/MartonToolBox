@@ -5,11 +5,10 @@ import { ToolService } from '../../core/services/tool.service';
 import { IconComponent } from '../../core/ui/icon.component';
 
 /** The API stores icon names; the offline fallback list still uses the old glyphs. */
-const GLYPH_TO_ICON: Record<string, string> = { '▦': 'table', '✦': 'sparkles', '▧': 'image', '▤': 'file', '⇄': 'convert' };
+const GLYPH_TO_ICON: Record<string, string> = { '▦': 'table', '▧': 'image', '▤': 'file', '⇄': 'convert' };
 /** Each tool gets its own accent color (by slug, so it stays stable when the list is filtered). */
 const TONES: Record<string, string> = {
   'csv-cleaner': 'indigo',
-  'screenshot-beautifier': 'pink',
   'image-resizer': 'violet',
   'pdf-toolkit': 'amber',
   'document-converter': 'teal',

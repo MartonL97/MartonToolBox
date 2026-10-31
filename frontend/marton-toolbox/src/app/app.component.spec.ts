@@ -10,7 +10,7 @@ describe('AppComponent', () => {
     const { el } = render(AppComponent);
     const labels = Array.from(el.querySelectorAll('aside nav a')).map((a) => text(a));
     expect(labels).toEqual(
-      jasmine.arrayContaining(['Dashboard', 'CSV Cleaner', 'Screenshot Beautifier', 'Image Resizer', 'PDF Toolkit', 'Document Converter']),
+      jasmine.arrayContaining(['Dashboard', 'CSV Cleaner', 'Image Resizer', 'PDF Toolkit', 'Document Converter']),
     );
   });
 
