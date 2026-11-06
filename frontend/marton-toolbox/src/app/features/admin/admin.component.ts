@@ -53,6 +53,15 @@ interface Inventory {
   reservationMinutes: number;
 }
 type StockLevel = 'out' | 'low' | 'ok';
+/** A product's inventory rows (one per size, or a single row without sizes). */
+interface InventoryProduct {
+  productId: string;
+  productName: string;
+  isActive: boolean;
+  rows: InventoryRow[];
+  available: number;
+  level: StockLevel;
+}
 type Tab = 'orders' | 'products' | 'inventory' | 'licenses';
 /** sizesText is edited as "S:20, M:15, L:0"; empty means the product has no sizes. */
 type ProductForm = Omit<AdminProduct, 'id' | 'currency' | 'imageUrl' | 'sizes'> & {
@@ -110,7 +119,24 @@ export class AdminComponent {
   /** Rows that are out of stock or at/below the low-stock threshold. */
   stockAlerts = computed(() => this.inventory().rows.filter((r) => this.level(r) !== 'ok'));
   outOfStockCount = computed(() => this.stockAlerts().filter((r) => this.level(r) === 'out').length);
-  visibleRows = computed(() => (this.showOnlyAlerts() ? this.stockAlerts() : this.inventory().rows));
+  /** Rows grouped by product, in catalog order. A product is out when nothing is left, low when any size needs restocking. */
+  inventoryProducts = computed<InventoryProduct[]>(() => {
+    const byId = new Map<string, InventoryProduct>();
+    for (const r of this.inventory().rows) {
+      let p = byId.get(r.productId);
+      if (!p) byId.set(r.productId, (p = { productId: r.productId, productName: r.productName, isActive: r.isActive, rows: [], available: 0, level: 'ok' }));
+      p.rows.push(r);
+      p.available += r.available;
+    }
+    for (const p of byId.values()) p.level = p.available <= 0 ? 'out' : p.rows.some((r) => this.level(r) !== 'ok') ? 'low' : 'ok';
+    return [...byId.values()];
+  });
+  visibleProducts = computed(() => this.inventoryProducts().filter((p) => !this.showOnlyAlerts() || p.level !== 'ok'));
+  selectedProductId = signal<string | null>(null);
+  /** The product open in the editor; falls back to the first listed one. */
+  selectedProduct = computed<InventoryProduct | null>(
+    () => this.visibleProducts().find((p) => p.productId === this.selectedProductId()) ?? this.visibleProducts()[0] ?? null,
+  );
   form = signal<ProductForm>(emptyProduct());
   /** Product, order or license id awaiting a second click to confirm deletion. */
   confirmDelete = signal<string | null>(null);
@@ -194,16 +220,28 @@ export class AdminComponent {
     return value === undefined || value === r.onHand ? null : value;
   }
 
-  async saveStock(r: InventoryRow) {
-    const stock = this.pendingStock(r);
-    if (stock === null) return;
-    if (!Number.isInteger(stock) || stock < 0) {
+  hasStockEdits(p: InventoryProduct) {
+    return p.rows.some((r) => this.pendingStock(r) !== null);
+  }
+
+  discardStock(p: InventoryProduct) {
+    const keys = new Set(p.rows.map((r) => this.rowKey(r)));
+    this.stockEdits.update((e) => Object.fromEntries(Object.entries(e).filter(([k]) => !keys.has(k))));
+  }
+
+  /** Saves every changed size of the product in one request. */
+  async saveStock(p: InventoryProduct) {
+    const items = p.rows
+      .filter((r) => this.pendingStock(r) !== null)
+      .map((r) => ({ variantId: r.variantId, stock: this.pendingStock(r)! }));
+    if (!items.length) return;
+    if (items.some((i) => !Number.isInteger(i.stock) || i.stock < 0)) {
       this.error.set('Stock must be a whole number, 0 or more.');
       return;
     }
-    await this.run(this.rowKey(r), async () => {
-      await firstValueFrom(this.http.put('/api/admin/inventory', { productId: r.productId, variantId: r.variantId, stock }));
-      this.stockEdits.update(({ [this.rowKey(r)]: _, ...rest }) => rest);
+    await this.run(p.productId, async () => {
+      await firstValueFrom(this.http.put(`/api/admin/inventory/${p.productId}`, { items }));
+      this.discardStock(p);
       const [inventory, products] = await Promise.all([
         this.get<Inventory>('/api/admin/inventory'),
         this.get<AdminProduct[]>('/api/admin/shop/products'),

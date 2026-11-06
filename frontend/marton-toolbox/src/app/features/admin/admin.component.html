@@ -214,55 +214,89 @@
       </p>
       <label class="inline only-alerts">
         <input type="checkbox" [checked]="showOnlyAlerts()" (change)="showOnlyAlerts.set(!showOnlyAlerts())" />
-        Show only items that need restocking
+        Show only products that need restocking
       </label>
-      <div class="list">
-        <div class="inventory-row inventory-head muted">
-          <span>Item</span>
-          <span>On hand</span>
-          <span>Reserved</span>
-          <span>To ship</span>
-          <span>Available</span>
-          <span></span>
-        </div>
-        @for (r of visibleRows(); track rowKey(r)) {
-          <div class="panel inventory-row" [attr.data-level]="level(r)">
-            <div>
-              <strong>{{ r.productName }}</strong>
-              @if (r.size) {
-                <span class="size-tag">{{ r.size }}</span>
-              }
-              @if (!r.isActive) {
-                <span class="muted">· hidden</span>
-              }
-            </div>
-            <div class="stock-edit">
-              <input
-                type="number"
-                min="0"
-                step="1"
-                [value]="pendingStock(r) ?? r.onHand"
-                (input)="editStock(r, $event)"
-                (keydown.enter)="saveStock(r)"
-                [attr.aria-label]="'On hand for ' + r.productName + (r.size ? ' size ' + r.size : '')"
-              />
-              @if (pendingStock(r) !== null) {
-                <button class="primary" (click)="saveStock(r)" [disabled]="busy() === rowKey(r)">
-                  {{ busy() === rowKey(r) ? 'Saving…' : 'Save' }}
-                </button>
-              }
-            </div>
-            <span>{{ r.reserved }}</span>
-            <span>{{ r.awaitingShipment }}</span>
-            <strong>{{ r.available }}</strong>
-            <span class="status-pill" [attr.data-status]="level(r) === 'ok' ? 'shipped' : level(r)">
-              {{ level(r) === 'out' ? 'Out of stock' : level(r) === 'low' ? 'Low stock' : 'In stock' }}
-            </span>
+      @if (visibleProducts().length) {
+        <div class="inventory-layout">
+          <div class="inventory-products" role="listbox" aria-label="Products">
+            @for (p of visibleProducts(); track p.productId) {
+              <button
+                type="button"
+                role="option"
+                class="inventory-product"
+                [class.active]="selectedProduct()?.productId === p.productId"
+                [attr.aria-selected]="selectedProduct()?.productId === p.productId"
+                [attr.data-level]="p.level"
+                (click)="selectedProductId.set(p.productId)"
+              >
+                <span class="inventory-product-name">
+                  <strong>{{ p.productName }}</strong>
+                  <span class="muted">
+                    {{ p.rows[0].size ? p.rows.length + ' sizes' : 'No sizes' }} · {{ p.available }} available
+                    @if (!p.isActive) {
+                      · hidden
+                    }
+                  </span>
+                </span>
+                <span class="status-pill" [attr.data-status]="p.level === 'ok' ? 'shipped' : p.level">
+                  {{ p.level === 'out' ? 'Out of stock' : p.level === 'low' ? 'Needs restock' : 'In stock' }}
+                </span>
+                @if (hasStockEdits(p)) {
+                  <span class="unsaved-dot" title="Unsaved changes"></span>
+                }
+              </button>
+            }
           </div>
-        } @empty {
-          <p class="empty-preview">{{ showOnlyAlerts() ? 'Everything is well stocked.' : 'No products yet.' }}</p>
-        }
-      </div>
+
+          @if (selectedProduct(); as p) {
+            <form class="panel stock-editor" (submit)="$event.preventDefault(); saveStock(p)">
+              <div class="stock-editor-head">
+                <h3>{{ p.productName }}</h3>
+                @if (!p.isActive) {
+                  <span class="muted">Hidden from the shop</span>
+                }
+              </div>
+              <div class="stock-line stock-line-head muted">
+                <span>Size</span>
+                <span>On hand</span>
+                <span>Reserved</span>
+                <span>To ship</span>
+                <span>Available</span>
+                <span></span>
+              </div>
+              @for (r of p.rows; track rowKey(r)) {
+                <div class="stock-line" [attr.data-level]="level(r)" [class.changed]="pendingStock(r) !== null">
+                  <strong>{{ r.size ?? '—' }}</strong>
+                  <input
+                    type="number"
+                    min="0"
+                    step="1"
+                    [value]="pendingStock(r) ?? r.onHand"
+                    (input)="editStock(r, $event)"
+                    [attr.aria-label]="'On hand for ' + p.productName + (r.size ? ' size ' + r.size : '')"
+                  />
+                  <span>{{ r.reserved }}</span>
+                  <span>{{ r.awaitingShipment }}</span>
+                  <strong>{{ r.available }}</strong>
+                  <span class="status-pill" [attr.data-status]="level(r) === 'ok' ? 'shipped' : level(r)">
+                    {{ level(r) === 'out' ? 'Out of stock' : level(r) === 'low' ? 'Low stock' : 'In stock' }}
+                  </span>
+                </div>
+              }
+              <div class="form-actions stock-actions">
+                <button class="primary" type="submit" [disabled]="!hasStockEdits(p) || busy() === p.productId">
+                  {{ busy() === p.productId ? 'Saving…' : 'Save stock' }}
+                </button>
+                @if (hasStockEdits(p)) {
+                  <button class="secondary" type="button" (click)="discardStock(p)">Discard changes</button>
+                }
+              </div>
+            </form>
+          }
+        </div>
+      } @else {
+        <p class="empty-preview">{{ showOnlyAlerts() ? 'Everything is well stocked.' : 'No products yet.' }}</p>
+      }
     }
 
     @if (tab() === 'licenses') {

@@ -7,4 +7,8 @@
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.11"><PrivateAssets>all</PrivateAssets></PackageReference>
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.6.2" />
   </ItemGroup>
+  <!-- Machine-local secrets stay on the dev machine; servers get their own appsettings.Production.json. -->
+  <ItemGroup>
+    <Content Update="appsettings.Local.json" CopyToPublishDirectory="Never" />
+  </ItemGroup>
 </Project>

@@ -163,51 +163,102 @@
   margin-bottom: 12px;
   font-size: 14px;
 }
-.inventory-row {
+.inventory-layout {
   display: grid;
-  /* Fixed tracks so the header and every product row line up whatever their contents. */
-  grid-template-columns: minmax(0, 1fr) 160px 80px 80px 80px 110px;
-  gap: 14px;
+  grid-template-columns: 300px minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+.inventory-products {
+  display: grid;
+  gap: 8px;
+}
+.inventory-product {
+  position: relative;
+  display: flex;
   align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  padding: 12px 14px;
+  text-align: left;
+  font-family: inherit;
+  color: inherit;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  cursor: pointer;
 }
-.inventory-head {
-  /* Matches .panel's 22px padding plus its 1px border. */
-  padding: 0 23px;
-  font-weight: 600;
+.inventory-product:hover {
+  border-color: var(--brand-ink);
 }
-/* Number columns (On hand … Available) sit centred under their headings. */
-.inventory-row > :nth-child(n + 2):nth-child(-n + 5) {
+.inventory-product.active {
+  border-color: var(--brand-ink);
+  box-shadow: 0 0 0 2px var(--brand-soft);
+}
+.inventory-product[data-level='out'] {
+  background: #fef2f2;
+}
+.inventory-product-name {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.inventory-product .status-pill {
+  white-space: nowrap;
+}
+.unsaved-dot {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--brand-ink);
+}
+.stock-editor-head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.stock-editor-head h3 {
+  margin: 0;
+}
+.stock-line {
+  display: grid;
+  /* Fixed tracks so the header lines up with every size row. */
+  grid-template-columns: 70px 100px 80px 80px 80px minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+  padding: 8px 10px;
+  border-radius: 8px;
+}
+/* Number columns sit centred under their headings. */
+.stock-line > :nth-child(n + 2):nth-child(-n + 5) {
   justify-self: center;
   text-align: center;
 }
-.inventory-row .status-pill {
+.stock-line input {
+  width: 90px;
+}
+.stock-line .status-pill {
   justify-self: start;
   white-space: nowrap;
 }
-.inventory-row[data-level='out'] {
-  border-color: #fecaca;
+.stock-line-head {
+  font-weight: 600;
+}
+.stock-line[data-level='out'] {
   background: #fef2f2;
 }
-.size-tag {
-  margin-left: 6px;
-  font-size: 12px;
-  font-weight: 600;
-  padding: 2px 8px;
-  border-radius: 6px;
-  background: var(--surface-2);
-  border: 1px solid var(--border);
+.stock-line.changed input {
+  border-color: var(--brand-ink);
+  box-shadow: 0 0 0 2px var(--brand-soft);
 }
-.stock-edit {
-  display: flex;
-  gap: 6px;
-  align-items: center;
-}
-.stock-edit input {
-  width: 80px;
-}
-.stock-edit .primary {
-  margin: 0;
-  padding: 8px 12px;
+.stock-actions {
+  margin-top: 14px;
 }
 .status-pill[data-status='out'] {
   background: #fef2f2;
@@ -217,10 +268,13 @@
   .inventory-summary {
     grid-template-columns: 1fr;
   }
-  .inventory-row {
-    grid-template-columns: 1fr 1fr;
+  .inventory-layout {
+    grid-template-columns: 1fr;
   }
-  .inventory-head {
+  .stock-line {
+    grid-template-columns: 50px 90px repeat(3, minmax(0, 1fr));
+  }
+  .stock-line .status-pill {
     display: none;
   }
 }

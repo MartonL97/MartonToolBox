@@ -33,7 +33,13 @@ app.UseExceptionHandler(error => error.Run(async context => { var exception = co
 app.UseHttpsRedirection(); app.UseCors(); app.UseRateLimiter(); app.UseAuthentication(); app.UseAuthorization();
 app.Use(async (ctx, next) => { ctx.Response.Headers.Append("X-Content-Type-Options", "nosniff"); ctx.Response.Headers.Append("X-Frame-Options", "DENY"); await next(); });
 if (app.Environment.IsDevelopment()) { app.UseSwagger(); app.UseSwaggerUI(); }
+// In a published build the Angular app sits in wwwroot, so one site (e.g. IIS) serves both; in development
+// wwwroot is absent and the Angular dev server proxies /api here instead.
+app.UseDefaultFiles(); app.UseStaticFiles();
 app.MapControllers().RequireRateLimiting("api");
+// Unknown /api paths stay 404s; every other path is an Angular route, so it gets index.html.
+app.MapFallback("/api/{**path}", () => Results.NotFound());
+app.MapFallbackToFile("index.html");
 await SeedToolsAsync(app.Services);
 app.Run();
 

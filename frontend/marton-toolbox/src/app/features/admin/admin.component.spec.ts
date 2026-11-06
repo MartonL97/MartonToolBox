@@ -149,37 +149,56 @@ describe('AdminComponent', () => {
     await settle(r.fixture);
   }
 
-  it('flags low and out-of-stock items in the inventory', async () => {
+  it('lists products with their stock level and opens the first one', async () => {
     const r = await setup();
     await openInventory(r);
-    const pills = Array.from(r.el.querySelectorAll('.inventory-row .status-pill')).map((p) => text(p));
-    expect(pills).toEqual(['In stock', 'Low stock', 'Out of stock']);
+    const products = Array.from(r.el.querySelectorAll('.inventory-product'));
+    expect(products.map((p) => text(p.querySelector('strong')))).toEqual(['MartonToolBox T-Shirt', 'Mug']);
+    expect(products.map((p) => text(p.querySelector('.status-pill')))).toEqual(['Needs restock', 'Out of stock']);
+    expect(text(r.el.querySelector('.stock-editor h3'))).toBe('MartonToolBox T-Shirt');
+    expect(Array.from(r.el.querySelectorAll('.stock-editor .stock-line:not(.stock-line-head) .status-pill')).map((p) => text(p))).toEqual([
+      'In stock',
+      'Low stock',
+    ]);
+
+    click(products[1]);
+    r.fixture.detectChanges();
+    expect(text(r.el.querySelector('.stock-editor h3'))).toBe('Mug');
 
     click(r.el.querySelector('.only-alerts input'));
     r.fixture.detectChanges();
-    expect(r.el.querySelectorAll('.inventory-row .status-pill').length).toBe(2);
+    expect(r.el.querySelectorAll('.inventory-product').length).toBe(2);
   });
 
-  it('saves a new on-hand count for a size', async () => {
+  it('saves all changed sizes of the selected product in one request', async () => {
     const r = await setup();
     await openInventory(r);
-    const input = r.el.querySelectorAll<HTMLInputElement>('.stock-edit input')[1];
-    input.value = '12';
-    input.dispatchEvent(new Event('input'));
+    const inputs = r.el.querySelectorAll<HTMLInputElement>('.stock-editor input');
+    inputs[0].value = '25';
+    inputs[0].dispatchEvent(new Event('input'));
+    inputs[1].value = '12';
+    inputs[1].dispatchEvent(new Event('input'));
     r.fixture.detectChanges();
 
-    click(r.el.querySelector('.stock-edit .primary'));
-    const req = r.http.expectOne('/api/admin/inventory');
+    click(r.el.querySelector('.stock-editor button[type="submit"]'));
+    const req = r.http.expectOne('/api/admin/inventory/p1');
     expect(req.request.method).toBe('PUT');
-    expect(req.request.body).toEqual({ productId: 'p1', variantId: 'v2', stock: 12 });
-    req.flush({ data: 12 });
+    expect(req.request.body).toEqual({
+      items: [
+        { variantId: 'v1', stock: 25 },
+        { variantId: 'v2', stock: 12 },
+      ],
+    });
+    req.flush({ data: 'p1' });
     await settle(r.fixture);
-    const rows = INVENTORY.rows.map((x) => (x.variantId === 'v2' ? { ...x, onHand: 12, available: 10 } : x));
-    r.http.expectOne((q) => q.method === 'GET' && q.url === '/api/admin/inventory').flush({ data: { ...INVENTORY, rows } });
+    const rows = INVENTORY.rows.map((x) =>
+      x.variantId === 'v1' ? { ...x, onHand: 25, available: 25 } : x.variantId === 'v2' ? { ...x, onHand: 12, available: 10 } : x,
+    );
+    r.http.expectOne('/api/admin/inventory').flush({ data: { ...INVENTORY, rows } });
     r.http.expectOne('/api/admin/shop/products').flush({ data: [PRODUCT] });
     await settle(r.fixture);
     expect(r.component.inventory().rows[1].onHand).toBe(12);
-    expect(r.el.querySelector('.stock-edit .primary')).toBeNull();
+    expect(r.el.querySelector<HTMLButtonElement>('.stock-editor button[type="submit"]')!.disabled).toBeTrue();
   });
 
   it('lists active licenses', async () => {

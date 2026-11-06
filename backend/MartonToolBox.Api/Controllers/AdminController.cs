@@ -30,7 +30,9 @@ public sealed record SetVisibilityRequest(bool IsActive);
 /// <summary>One stock-keeping line: a size of a sized product, or the product itself when it has no sizes.</summary>
 public sealed record InventoryRowDto(Guid ProductId, Guid? VariantId, string ProductName, string? Size, bool IsActive, int OnHand, int Reserved, int AwaitingShipment, int Available);
 public sealed record InventoryDto(IReadOnlyList<InventoryRowDto> Rows, int LowStockThreshold, int ReservationMinutes);
-public sealed record SetStockRequest(Guid ProductId, Guid? VariantId, [Range(0, 1_000_000)] int Stock);
+/// <summary>VariantId is null for a product without sizes.</summary>
+public sealed record SetStockItem(Guid? VariantId, [Range(0, 1_000_000)] int Stock);
+public sealed record SetProductStockRequest([Required, MinLength(1)] IReadOnlyList<SetStockItem> Items);
 public sealed record AdminShopOrderDto(ShopOrderDto Order, string UserEmail, string? ShippingName, string? ShippingPhone, string? ShippingAddress, string? ShippingCity, string? ShippingCounty, string? ShippingPostalCode);
 
 /// <summary>
@@ -155,25 +157,29 @@ public sealed class AdminController(AppDbContext db, PayUPaymentService payu, IC
         return Ok(new ApiResponse<InventoryDto>(new InventoryDto(rows, configuration.GetValue<int?>("Shop:LowStockThreshold") ?? 3, (int)window.TotalMinutes)));
     }
 
-    /// <summary>Sets the on-hand count after a restock or stock-take.</summary>
-    [HttpPut("inventory")]
-    public async Task<IActionResult> SetStock(SetStockRequest request, CancellationToken ct)
+    /// <summary>
+    /// Sets on-hand counts for one product after a restock or stock-take: any of its sizes in one go,
+    /// or its single count when it has no sizes. Nothing is saved if any line is invalid.
+    /// </summary>
+    [HttpPut("inventory/{productId:guid}")]
+    public async Task<IActionResult> SetProductStock(Guid productId, SetProductStockRequest request, CancellationToken ct)
     {
-        if (request.VariantId is { } variantId)
+        var product = await db.ShopProducts.FirstOrDefaultAsync(p => p.Id == productId, ct);
+        if (product is null) return NotFound();
+        if (request.Items.GroupBy(i => i.VariantId).Any(g => g.Count() > 1)) return BadRequest(new { error = "A size is listed twice." });
+        var variants = await db.ShopProductVariants.Where(v => v.ProductId == productId).ToDictionaryAsync(v => v.Id, ct);
+        foreach (var item in request.Items)
         {
-            var variant = await db.ShopProductVariants.FirstOrDefaultAsync(v => v.Id == variantId && v.ProductId == request.ProductId, ct);
-            if (variant is null) return NotFound();
-            variant.Stock = request.Stock;
-        }
-        else
-        {
-            var product = await db.ShopProducts.FirstOrDefaultAsync(p => p.Id == request.ProductId, ct);
-            if (product is null) return NotFound();
-            if (await db.ShopProductVariants.AnyAsync(v => v.ProductId == product.Id, ct)) return BadRequest(new { error = "This product has sizes; set stock per size." });
-            product.Stock = request.Stock;
+            if (item.VariantId is { } variantId)
+            {
+                if (!variants.TryGetValue(variantId, out var variant)) return BadRequest(new { error = "One of the sizes no longer exists. Reload and try again." });
+                variant.Stock = item.Stock;
+            }
+            else if (variants.Count > 0) return BadRequest(new { error = "This product has sizes; set stock per size." });
+            else product.Stock = item.Stock;
         }
         await db.SaveChangesAsync(ct);
-        return Ok(new ApiResponse<int>(request.Stock));
+        return Ok(new ApiResponse<Guid>(productId));
     }
 
     [HttpGet("shop/orders")]
