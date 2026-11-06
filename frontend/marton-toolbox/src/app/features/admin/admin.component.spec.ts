@@ -46,6 +46,16 @@ const LICENSE = {
   expiresAt: null,
 };
 
+const INVENTORY = {
+  lowStockThreshold: 5,
+  reservationMinutes: 30,
+  rows: [
+    { productId: 'p1', variantId: 'v1', productName: 'MartonToolBox T-Shirt', size: 'S', isActive: true, onHand: 20, reserved: 0, awaitingShipment: 0, available: 20 },
+    { productId: 'p1', variantId: 'v2', productName: 'MartonToolBox T-Shirt', size: 'M', isActive: true, onHand: 5, reserved: 2, awaitingShipment: 1, available: 3 },
+    { productId: 'p2', variantId: null, productName: 'Mug', size: null, isActive: true, onHand: 1, reserved: 1, awaitingShipment: 0, available: 0 },
+  ],
+};
+
 describe('AdminComponent', () => {
   async function setup() {
     const r = render(AdminComponent, { user: TEST_USER });
@@ -53,6 +63,7 @@ describe('AdminComponent', () => {
     r.http.expectOne('/api/admin/licenses').flush({ data: [LICENSE] });
     r.http.expectOne('/api/admin/shop/orders').flush({ data: [ORDER] });
     r.http.expectOne('/api/admin/shop/products').flush({ data: [PRODUCT] });
+    r.http.expectOne('/api/admin/inventory').flush({ data: INVENTORY });
     await settle(r.fixture);
     return r;
   }
@@ -63,6 +74,7 @@ describe('AdminComponent', () => {
     expect(Array.from(el.querySelectorAll('.tabs button')).map((b) => text(b))).toEqual([
       'Product orders (1)',
       'Products (1)',
+      'Inventory (2 low)',
       'Active licenses (1)',
     ]);
   });
@@ -131,6 +143,45 @@ describe('AdminComponent', () => {
     expect(component.form().id).toBeNull(); // form resets after saving
   });
 
+  async function openInventory(r: Awaited<ReturnType<typeof setup>>) {
+    click(tab(r.el, 'Inventory'));
+    r.http.expectOne('/api/admin/inventory').flush({ data: INVENTORY });
+    await settle(r.fixture);
+  }
+
+  it('flags low and out-of-stock items in the inventory', async () => {
+    const r = await setup();
+    await openInventory(r);
+    const pills = Array.from(r.el.querySelectorAll('.inventory-row .status-pill')).map((p) => text(p));
+    expect(pills).toEqual(['In stock', 'Low stock', 'Out of stock']);
+
+    click(r.el.querySelector('.only-alerts input'));
+    r.fixture.detectChanges();
+    expect(r.el.querySelectorAll('.inventory-row .status-pill').length).toBe(2);
+  });
+
+  it('saves a new on-hand count for a size', async () => {
+    const r = await setup();
+    await openInventory(r);
+    const input = r.el.querySelectorAll<HTMLInputElement>('.stock-edit input')[1];
+    input.value = '12';
+    input.dispatchEvent(new Event('input'));
+    r.fixture.detectChanges();
+
+    click(r.el.querySelector('.stock-edit .primary'));
+    const req = r.http.expectOne('/api/admin/inventory');
+    expect(req.request.method).toBe('PUT');
+    expect(req.request.body).toEqual({ productId: 'p1', variantId: 'v2', stock: 12 });
+    req.flush({ data: 12 });
+    await settle(r.fixture);
+    const rows = INVENTORY.rows.map((x) => (x.variantId === 'v2' ? { ...x, onHand: 12, available: 10 } : x));
+    r.http.expectOne((q) => q.method === 'GET' && q.url === '/api/admin/inventory').flush({ data: { ...INVENTORY, rows } });
+    r.http.expectOne('/api/admin/shop/products').flush({ data: [PRODUCT] });
+    await settle(r.fixture);
+    expect(r.component.inventory().rows[1].onHand).toBe(12);
+    expect(r.el.querySelector('.stock-edit .primary')).toBeNull();
+  });
+
   it('lists active licenses', async () => {
     const { el, fixture } = await setup();
     click(tab(el, 'Active licenses'));
@@ -138,6 +189,30 @@ describe('AdminComponent', () => {
     expect(text(el.querySelector('.license-key'))).toBe('MTB-KEY');
     expect(el.textContent).toContain('maria@example.com');
     expect(el.textContent).not.toContain('Approve');
+  });
+
+  it('cancels an order the customer asked to cancel', async () => {
+    const r = render(AdminComponent, { user: TEST_USER });
+    flushAll(r.http, '/api/account', { data: { isAdmin: true } });
+    const requested = { ...ORDER, order: { ...ORDER.order, status: 'CancelRequested' } };
+    r.http.expectOne('/api/admin/licenses').flush({ data: [LICENSE] });
+    r.http.expectOne('/api/admin/shop/orders').flush({ data: [requested] });
+    r.http.expectOne('/api/admin/shop/products').flush({ data: [PRODUCT] });
+    r.http.expectOne('/api/admin/inventory').flush({ data: INVENTORY });
+    await settle(r.fixture);
+    expect(text(tab(r.el, 'Product orders'))).toBe('Product orders (1) · 1 to cancel');
+    expect(text(r.el.querySelector('.admin-order .status-pill'))).toBe('Waiting for cancellation');
+
+    click(Array.from(r.el.querySelectorAll('.row-buttons button')).find((b) => text(b) === 'Approve cancellation'));
+    r.fixture.detectChanges();
+    click(r.el.querySelector('.row-buttons .danger'));
+    const req = r.http.expectOne(`/api/admin/shop/orders/${ORDER.order.id}/cancel`);
+    expect(req.request.method).toBe('POST');
+    req.flush({ data: 'Cancelled' });
+    await settle(r.fixture);
+    r.http.expectOne('/api/admin/shop/orders').flush({ data: [{ ...ORDER, order: { ...ORDER.order, status: 'Cancelled' } }] });
+    await settle(r.fixture);
+    expect(text(r.el.querySelector('.admin-order .status-pill'))).toBe('Cancelled');
   });
 
   it('asks for confirmation before deleting an order', async () => {

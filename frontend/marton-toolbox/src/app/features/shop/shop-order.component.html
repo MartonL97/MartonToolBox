@@ -24,6 +24,22 @@
           <p class="lead">You haven't been charged. Your cart is still saved.</p>
         </div>
       </div>
+    } @else if (o.status === 'CancelRequested') {
+      <div class="status-banner">
+        <mtb-icon name="package" />
+        <div>
+          <h1>Waiting for cancellation</h1>
+          <p class="lead">We've received your request. You haven't been charged, and the order will be removed once we cancel it.</p>
+        </div>
+      </div>
+    } @else if (o.status === 'Cancelled') {
+      <div class="status-banner error">
+        <mtb-icon name="cart" />
+        <div>
+          <h1>Order cancelled</h1>
+          <p class="lead">This order was cancelled and you haven't been charged.</p>
+        </div>
+      </div>
     } @else {
       <div class="status-banner">
         <span class="spinner"></span>
@@ -63,9 +79,23 @@
       @if (o.status === 'Pending' && timedOut()) {
         <button class="primary" (click)="retry()">Check again</button>
       }
+      @if (o.status === 'Pending') {
+        @if (confirmCancel()) {
+          <span class="cancel-confirm">Cancel this order?</span>
+          <button class="danger" (click)="requestCancel()" [disabled]="cancelling()">
+            {{ cancelling() ? 'Sending…' : 'Yes, cancel order' }}
+          </button>
+          <button class="secondary" (click)="confirmCancel.set(false)">Keep order</button>
+        } @else {
+          <button class="secondary" (click)="confirmCancel.set(true)">Cancel order</button>
+        }
+      }
       <a class="secondary" routerLink="/shop/orders">My orders</a>
       <a class="secondary" routerLink="/shop">Continue shopping</a>
     </div>
+    @if (error()) {
+      <p class="error-text">{{ error() }}</p>
+    }
   } @else if (error()) {
     <p class="error-text">{{ error() }}</p>
   } @else {

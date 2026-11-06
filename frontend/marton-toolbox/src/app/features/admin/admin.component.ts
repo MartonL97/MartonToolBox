@@ -1,8 +1,8 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { DatePipe } from '@angular/common';
 import { firstValueFrom } from 'rxjs';
-import { ShopOrder, money } from '../../core/shop/cart.service';
+import { ORDER_STATUS_LABELS, ShopOrder, money } from '../../core/shop/cart.service';
 
 interface ActiveLicense {
   id: string;
@@ -36,7 +36,24 @@ interface AdminShopOrder {
   shippingCounty: string | null;
   shippingPostalCode: string | null;
 }
-type Tab = 'orders' | 'products' | 'licenses';
+interface InventoryRow {
+  productId: string;
+  variantId: string | null;
+  productName: string;
+  size: string | null;
+  isActive: boolean;
+  onHand: number;
+  reserved: number;
+  awaitingShipment: number;
+  available: number;
+}
+interface Inventory {
+  rows: InventoryRow[];
+  lowStockThreshold: number;
+  reservationMinutes: number;
+}
+type StockLevel = 'out' | 'low' | 'ok';
+type Tab = 'orders' | 'products' | 'inventory' | 'licenses';
 /** sizesText is edited as "S:20, M:15, L:0"; empty means the product has no sizes. */
 type ProductForm = Omit<AdminProduct, 'id' | 'currency' | 'imageUrl' | 'sizes'> & {
   id: string | null;
@@ -86,9 +103,22 @@ export class AdminComponent {
   licenses = signal<ActiveLicense[]>([]);
   shopOrders = signal<AdminShopOrder[]>([]);
   products = signal<AdminProduct[]>([]);
+  inventory = signal<Inventory>({ rows: [], lowStockThreshold: 0, reservationMinutes: 0 });
+  /** Unsaved on-hand counts typed into the inventory table, keyed by rowKey. */
+  stockEdits = signal<Record<string, number>>({});
+  showOnlyAlerts = signal(false);
+  /** Rows that are out of stock or at/below the low-stock threshold. */
+  stockAlerts = computed(() => this.inventory().rows.filter((r) => this.level(r) !== 'ok'));
+  outOfStockCount = computed(() => this.stockAlerts().filter((r) => this.level(r) === 'out').length);
+  visibleRows = computed(() => (this.showOnlyAlerts() ? this.stockAlerts() : this.inventory().rows));
   form = signal<ProductForm>(emptyProduct());
   /** Product, order or license id awaiting a second click to confirm deletion. */
   confirmDelete = signal<string | null>(null);
+  /** Order id awaiting a second click to confirm cancelling it. */
+  confirmCancel = signal<string | null>(null);
+  /** Orders whose buyer asked to cancel; shown on the orders tab so they aren't missed. */
+  cancelRequests = computed(() => this.shopOrders().filter((o) => o.order.status === 'CancelRequested').length);
+  statusLabels = ORDER_STATUS_LABELS;
   emptyProduct = emptyProduct;
   money = money;
 
@@ -112,6 +142,14 @@ export class AdminComponent {
     });
   }
 
+  async cancelOrder(o: AdminShopOrder) {
+    await this.run(o.order.id, async () => {
+      await firstValueFrom(this.http.post(`/api/admin/shop/orders/${o.order.id}/cancel`, {}));
+      this.confirmCancel.set(null);
+      this.shopOrders.set(await this.get<AdminShopOrder[]>('/api/admin/shop/orders'));
+    });
+  }
+
   async deleteOrder(o: AdminShopOrder) {
     await this.run(o.order.id, async () => {
       await firstValueFrom(this.http.delete(`/api/admin/shop/orders/${o.order.id}`));
@@ -130,6 +168,51 @@ export class AdminComponent {
     });
   }
 
+  /** Switches to the inventory tab with fresh numbers, since orders and product edits change them. */
+  async openInventory() {
+    this.tab.set('inventory');
+    await this.run('inventory', async () => this.inventory.set(await this.get<Inventory>('/api/admin/inventory')));
+  }
+
+  rowKey(r: InventoryRow) {
+    return r.variantId ?? r.productId;
+  }
+
+  level(r: InventoryRow): StockLevel {
+    if (r.available <= 0) return 'out';
+    return r.available <= this.inventory().lowStockThreshold ? 'low' : 'ok';
+  }
+
+  editStock(r: InventoryRow, event: Event) {
+    const value = Number((event.target as HTMLInputElement).value);
+    this.stockEdits.update((e) => ({ ...e, [this.rowKey(r)]: value }));
+  }
+
+  /** The typed count when it differs from what's saved, else null. */
+  pendingStock(r: InventoryRow): number | null {
+    const value = this.stockEdits()[this.rowKey(r)];
+    return value === undefined || value === r.onHand ? null : value;
+  }
+
+  async saveStock(r: InventoryRow) {
+    const stock = this.pendingStock(r);
+    if (stock === null) return;
+    if (!Number.isInteger(stock) || stock < 0) {
+      this.error.set('Stock must be a whole number, 0 or more.');
+      return;
+    }
+    await this.run(this.rowKey(r), async () => {
+      await firstValueFrom(this.http.put('/api/admin/inventory', { productId: r.productId, variantId: r.variantId, stock }));
+      this.stockEdits.update(({ [this.rowKey(r)]: _, ...rest }) => rest);
+      const [inventory, products] = await Promise.all([
+        this.get<Inventory>('/api/admin/inventory'),
+        this.get<AdminProduct[]>('/api/admin/shop/products'),
+      ]);
+      this.inventory.set(inventory);
+      this.products.set(products);
+    });
+  }
+
   short(id: string) {
     return id.replace(/-/g, '').slice(0, 8).toUpperCase();
   }
@@ -138,14 +221,16 @@ export class AdminComponent {
     this.error.set('');
     this.loading.set(true);
     try {
-      const [licenses, orders, products] = await Promise.all([
+      const [licenses, orders, products, inventory] = await Promise.all([
         this.get<ActiveLicense[]>('/api/admin/licenses'),
         this.get<AdminShopOrder[]>('/api/admin/shop/orders'),
         this.get<AdminProduct[]>('/api/admin/shop/products'),
+        this.get<Inventory>('/api/admin/inventory'),
       ]);
       this.licenses.set(licenses);
       this.shopOrders.set(orders);
       this.products.set(products);
+      this.inventory.set(inventory);
       this.loaded.set(true);
     } catch {
       this.loaded.set(false);

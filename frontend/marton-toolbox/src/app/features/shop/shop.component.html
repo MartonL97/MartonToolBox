@@ -50,7 +50,7 @@
                 <span>Size</span>
                 @if (selected(product); as s) {
                   <strong>{{ s.size }}</strong>
-                  @if (s.stock > 0 && s.stock <= 5) {
+                  @if (s.stock > 0 && s.stock <= 3) {
                     <em>Only {{ s.stock }} left</em>
                   }
                 }

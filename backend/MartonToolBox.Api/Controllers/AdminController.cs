@@ -27,6 +27,10 @@ public sealed record SaveProductRequest(
     int SortOrder,
     IReadOnlyList<SaveSizeRequest>? Sizes);
 public sealed record SetVisibilityRequest(bool IsActive);
+/// <summary>One stock-keeping line: a size of a sized product, or the product itself when it has no sizes.</summary>
+public sealed record InventoryRowDto(Guid ProductId, Guid? VariantId, string ProductName, string? Size, bool IsActive, int OnHand, int Reserved, int AwaitingShipment, int Available);
+public sealed record InventoryDto(IReadOnlyList<InventoryRowDto> Rows, int LowStockThreshold, int ReservationMinutes);
+public sealed record SetStockRequest(Guid ProductId, Guid? VariantId, [Range(0, 1_000_000)] int Stock);
 public sealed record AdminShopOrderDto(ShopOrderDto Order, string UserEmail, string? ShippingName, string? ShippingPhone, string? ShippingAddress, string? ShippingCity, string? ShippingCounty, string? ShippingPostalCode);
 
 /// <summary>
@@ -34,7 +38,7 @@ public sealed record AdminShopOrderDto(ShopOrderDto Order, string UserEmail, str
 /// Only users with the Admin role, checked per request, can call these.
 /// </summary>
 [ApiController, Route("api/admin"), Authorize(Policy = AdminPolicy.Name)]
-public sealed class AdminController(AppDbContext db, IConfiguration configuration) : ControllerBase
+public sealed class AdminController(AppDbContext db, PayUPaymentService payu, IConfiguration configuration, ILogger<AdminController> logger) : ControllerBase
 {
     /// <summary>Everyone with an active license, newest first.</summary>
     [HttpGet("licenses")]
@@ -123,6 +127,55 @@ public sealed class AdminController(AppDbContext db, IConfiguration configuratio
         return Ok(new ApiResponse<Guid>(id));
     }
 
+    /// <summary>
+    /// Stock per product and size. OnHand is what's in the warehouse (paid orders are already deducted, including
+    /// those still to ship); Reserved is held by unpaid checkouts; Available = OnHand - Reserved is what shoppers can buy.
+    /// </summary>
+    [HttpGet("inventory")]
+    public async Task<ActionResult<ApiResponse<InventoryDto>>> Inventory(CancellationToken ct)
+    {
+        var window = ShopController.ReservationWindowFrom(configuration);
+        var products = await db.ShopProducts.OrderBy(p => p.SortOrder).ThenBy(p => p.Name).ToListAsync(ct);
+        var sizes = await ShopController.LoadSizesAsync(db, products.Select(p => p.Id), ct);
+        var reserved = await ShopController.LoadReservedAsync(db, window, ct);
+        var toShip = await db.OrderItems
+            .Where(i => db.Orders.Any(o => o.Id == i.OrderId && o.Kind == OrderKinds.Shop && o.Status == "Paid" && o.ShippedAt == null))
+            .GroupBy(i => new { i.ProductId, i.VariantId })
+            .Select(g => new { g.Key.ProductId, g.Key.VariantId, Quantity = g.Sum(i => i.Quantity) })
+            .ToDictionaryAsync(r => (r.ProductId, r.VariantId), r => r.Quantity, ct);
+
+        InventoryRowDto Row(ShopProduct p, Guid? variantId, string? size, int onHand) => new(
+            p.Id, variantId, p.Name, size, p.IsActive, onHand,
+            reserved.GetValueOrDefault((p.Id, variantId)), toShip.GetValueOrDefault((p.Id, variantId)),
+            ShopController.Available(onHand, reserved, p.Id, variantId));
+
+        var rows = products.SelectMany(p => sizes[p.Id].Any()
+            ? sizes[p.Id].Select(v => Row(p, v.Id, v.Size, v.Stock))
+            : [Row(p, null, null, p.Stock)]).ToList();
+        return Ok(new ApiResponse<InventoryDto>(new InventoryDto(rows, configuration.GetValue<int?>("Shop:LowStockThreshold") ?? 3, (int)window.TotalMinutes)));
+    }
+
+    /// <summary>Sets the on-hand count after a restock or stock-take.</summary>
+    [HttpPut("inventory")]
+    public async Task<IActionResult> SetStock(SetStockRequest request, CancellationToken ct)
+    {
+        if (request.VariantId is { } variantId)
+        {
+            var variant = await db.ShopProductVariants.FirstOrDefaultAsync(v => v.Id == variantId && v.ProductId == request.ProductId, ct);
+            if (variant is null) return NotFound();
+            variant.Stock = request.Stock;
+        }
+        else
+        {
+            var product = await db.ShopProducts.FirstOrDefaultAsync(p => p.Id == request.ProductId, ct);
+            if (product is null) return NotFound();
+            if (await db.ShopProductVariants.AnyAsync(v => v.ProductId == product.Id, ct)) return BadRequest(new { error = "This product has sizes; set stock per size." });
+            product.Stock = request.Stock;
+        }
+        await db.SaveChangesAsync(ct);
+        return Ok(new ApiResponse<int>(request.Stock));
+    }
+
     [HttpGet("shop/orders")]
     public async Task<ActionResult<ApiResponse<List<AdminShopOrderDto>>>> ShopOrders(CancellationToken ct)
     {
@@ -143,6 +196,30 @@ public sealed class AdminController(AppDbContext db, IConfiguration configuratio
         order.ShippedAt ??= DateTimeOffset.UtcNow;
         await db.SaveChangesAsync(ct);
         return Ok(new ApiResponse<string>("Shipped"));
+    }
+
+    /// <summary>
+    /// Cancels an unpaid order (whether or not the buyer asked) and closes its PayU payment, so it can't be
+    /// paid later. It disappears from the buyer's order list. Refused if PayU says it has been paid meanwhile.
+    /// </summary>
+    [HttpPost("shop/orders/{orderId:guid}/cancel")]
+    public async Task<IActionResult> CancelOrder(Guid orderId, CancellationToken ct)
+    {
+        var order = await db.Orders.FirstOrDefaultAsync(o => o.Id == orderId && o.Kind == OrderKinds.Shop, ct);
+        if (order is null) return NotFound();
+        if (order.Status is not ("Pending" or OrderStatuses.CancelRequested)) return BadRequest(new { error = "Only unpaid orders can be cancelled." });
+        try
+        {
+            if (!await payu.CancelOrderAsync(orderId, ct)) return Conflict(new { error = "This order has just been paid, so it can't be cancelled here." });
+        }
+        catch (Exception ex) when (ex is HttpRequestException or InvalidOperationException)
+        {
+            logger.LogError(ex, "Could not cancel PayU payment for shop order {OrderId}.", orderId);
+            return StatusCode(502, new { error = "Couldn't reach PayU to close the payment. Please try again in a moment." });
+        }
+        order.Status = OrderStatuses.Cancelled;
+        await db.SaveChangesAsync(ct);
+        return Ok(new ApiResponse<string>(order.Status));
     }
 
     /// <summary>

@@ -1,1 +1,20 @@
 // Page-specific styles. Shared design tokens and layout live in src/styles.scss.
+.cancel-confirm {
+  align-self: center;
+  color: var(--text-2);
+  font-size: 14px;
+}
+.actions .danger {
+  border: 0;
+  background: var(--danger);
+  color: #fff;
+  border-radius: 10px;
+  padding: 10px 16px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+}
+.actions .danger:disabled {
+  opacity: 0.6;
+  cursor: default;
+}

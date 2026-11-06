@@ -29,3 +29,13 @@ public static class OrderKinds
     public const string License = "License";
     public const string Shop = "Shop";
 }
+
+/// <summary>
+/// Order.Status values besides "Pending", "Paid" and "Failed". A buyer can ask to cancel an unpaid shop order
+/// (CancelRequested); an admin then cancels it (Cancelled), which hides it from the buyer's order list.
+/// </summary>
+public static class OrderStatuses
+{
+    public const string CancelRequested = "CancelRequested";
+    public const string Cancelled = "Cancelled";
+}

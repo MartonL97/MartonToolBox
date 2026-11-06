@@ -41,6 +41,25 @@ describe('ShopOrderComponent', () => {
     expect(el.querySelector('a[href="/shop/cart"]')).toBeTruthy();
   });
 
+  it('lets the buyer ask to cancel an unpaid order', async () => {
+    const { el, http, harness } = await setup({ ...ORDER, status: 'Pending' });
+    const cancel = Array.from(el.querySelectorAll('.actions button')).find((b) => text(b) === 'Cancel order')!;
+    (cancel as HTMLElement).click();
+    harness.detectChanges();
+    http.expectNone(`/api/shop/orders/${ORDER.id}/cancel`);
+
+    (el.querySelector('.actions .danger') as HTMLElement).click();
+    http.expectOne(`/api/shop/orders/${ORDER.id}/cancel`).flush({ data: { ...ORDER, status: 'CancelRequested' } });
+    await settle(harness);
+    expect(text(el.querySelector('h1'))).toBe('Waiting for cancellation');
+    expect(Array.from(el.querySelectorAll('.actions button')).some((b) => text(b) === 'Cancel order')).toBeFalse();
+  });
+
+  it('offers no cancel button once paid', async () => {
+    const { el } = await setup(ORDER);
+    expect(Array.from(el.querySelectorAll('.actions button')).some((b) => text(b) === 'Cancel order')).toBeFalse();
+  });
+
   it('mentions shipping once the order has shipped', async () => {
     const { el } = await setup({ ...ORDER, shippedAt: '2026-10-28T09:00:00Z' });
     expect(el.textContent).toContain('Your order has shipped.');

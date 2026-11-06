@@ -33,20 +33,47 @@ public sealed class ShopController(AppDbContext db, PayUPaymentService payu, Use
     private string Currency => configuration["Shop:Currency"] ?? "RON";
     private decimal ShippingCost => configuration.GetValue<decimal?>("Shop:ShippingCost") ?? 15m;
     private decimal FreeShippingOver => configuration.GetValue<decimal?>("Shop:FreeShippingOver") ?? 200m;
+    private TimeSpan ReservationWindow => ReservationWindowFrom(configuration);
+
+    internal static TimeSpan ReservationWindowFrom(IConfiguration configuration) =>
+        TimeSpan.FromMinutes(configuration.GetValue<int?>("Shop:ReservationMinutes") ?? 30);
 
     [HttpGet("products"), AllowAnonymous]
     public async Task<ActionResult<ApiResponse<ShopCatalogDto>>> Products(CancellationToken ct)
     {
         var products = await db.ShopProducts.Where(p => p.IsActive).OrderBy(p => p.SortOrder).ThenBy(p => p.Name).ToListAsync(ct);
         var sizes = await LoadSizesAsync(db, products.Select(p => p.Id), ct);
-        var dtos = products.Select(p => ToDto(p, sizes[p.Id].ToList())).ToList();
+        var reserved = await LoadReservedAsync(db, ReservationWindow, ct);
+        var dtos = products.Select(p => ToDto(p, sizes[p.Id].ToList(), reserved)).ToList();
         return Ok(new ApiResponse<ShopCatalogDto>(new ShopCatalogDto(dtos, ShippingCost, FreeShippingOver, Currency)));
     }
 
-    internal static ShopProductDto ToDto(ShopProduct p, IReadOnlyList<ShopProductVariant> sizes) => new(
-        p.Id, p.Slug, p.Name, p.Description, p.Price, p.Currency, p.ImageUrl,
-        sizes.Count > 0 ? sizes.Sum(v => v.Stock) : p.Stock,
-        sizes.Select(v => new ShopVariantDto(v.Id, v.Size, v.Stock)).ToList());
+    /// <summary>Stock shown to shoppers is what's left after units held by unpaid checkouts.</summary>
+    internal static ShopProductDto ToDto(ShopProduct p, IReadOnlyList<ShopProductVariant> sizes, IReadOnlyDictionary<(Guid, Guid?), int> reserved)
+    {
+        var dtoSizes = sizes.Select(v => new ShopVariantDto(v.Id, v.Size, Available(v.Stock, reserved, p.Id, v.Id))).ToList();
+        return new(p.Id, p.Slug, p.Name, p.Description, p.Price, p.Currency, p.ImageUrl,
+            sizes.Count > 0 ? dtoSizes.Sum(v => v.Stock) : Available(p.Stock, reserved, p.Id, null), dtoSizes);
+    }
+
+    internal static int Available(int stock, IReadOnlyDictionary<(Guid, Guid?), int> reserved, Guid productId, Guid? variantId) =>
+        Math.Max(0, stock - reserved.GetValueOrDefault((productId, variantId)));
+
+    /// <summary>
+    /// Units held by unpaid shop orders placed within the window, keyed by (product, size). Stock is only deducted
+    /// once PayU confirms payment, so without this two shoppers could both check out the last item.
+    /// Older unpaid orders are treated as abandoned and release their units.
+    /// </summary>
+    internal static async Task<Dictionary<(Guid, Guid?), int>> LoadReservedAsync(AppDbContext db, TimeSpan window, CancellationToken ct)
+    {
+        var since = DateTimeOffset.UtcNow - window;
+        var pending = db.Orders.Where(o => o.Kind == OrderKinds.Shop && o.Status == "Pending" && o.CreatedAt >= since).Select(o => o.Id);
+        var rows = await db.OrderItems.Where(i => pending.Contains(i.OrderId))
+            .GroupBy(i => new { i.ProductId, i.VariantId })
+            .Select(g => new { g.Key.ProductId, g.Key.VariantId, Quantity = g.Sum(i => i.Quantity) })
+            .ToListAsync(ct);
+        return rows.ToDictionary(r => (r.ProductId, r.VariantId), r => r.Quantity);
+    }
 
     internal static async Task<ILookup<Guid, ShopProductVariant>> LoadSizesAsync(AppDbContext db, IEnumerable<Guid> productIds, CancellationToken ct)
     {
@@ -65,6 +92,7 @@ public sealed class ShopController(AppDbContext db, PayUPaymentService payu, Use
         var productIds = quantities.Keys.Select(k => k.ProductId).Distinct().ToList();
         var products = await db.ShopProducts.Where(p => productIds.Contains(p.Id) && p.IsActive).ToDictionaryAsync(p => p.Id, ct);
         var sizes = await LoadSizesAsync(db, productIds, ct);
+        var reserved = await LoadReservedAsync(db, ReservationWindow, ct);
         var items = new List<OrderItem>();
         foreach (var ((productId, variantId), quantity) in quantities)
         {
@@ -72,13 +100,15 @@ public sealed class ShopController(AppDbContext db, PayUPaymentService payu, Use
             var productSizes = sizes[productId].ToList();
             if (productSizes.Count == 0)
             {
-                if (product.Stock < quantity) return BadRequest(new { error = $"Only {product.Stock} × {product.Name} left in stock." });
+                var available = Available(product.Stock, reserved, product.Id, null);
+                if (available < quantity) return BadRequest(new { error = available == 0 ? $"{product.Name} is out of stock." : $"Only {available} × {product.Name} left in stock." });
                 items.Add(new OrderItem { ProductId = product.Id, ProductName = product.Name, UnitPrice = product.Price, Quantity = quantity });
                 continue;
             }
             var variant = productSizes.FirstOrDefault(v => v.Id == variantId);
             if (variant is null) return BadRequest(new { error = $"Please choose a size for {product.Name}." });
-            if (variant.Stock < quantity) return BadRequest(new { error = $"Only {variant.Stock} × {product.Name} (size {variant.Size}) left in stock." });
+            var availableSize = Available(variant.Stock, reserved, product.Id, variant.Id);
+            if (availableSize < quantity) return BadRequest(new { error = availableSize == 0 ? $"{product.Name} (size {variant.Size}) is out of stock." : $"Only {availableSize} × {product.Name} (size {variant.Size}) left in stock." });
             items.Add(new OrderItem { ProductId = product.Id, VariantId = variant.Id, Size = variant.Size, ProductName = product.Name, UnitPrice = product.Price, Quantity = quantity });
         }
 
@@ -115,7 +145,8 @@ public sealed class ShopController(AppDbContext db, PayUPaymentService payu, Use
     {
         var user = await users.GetUserAsync(User);
         if (user is null) return Unauthorized();
-        return Ok(new ApiResponse<List<ShopOrderDto>>(await LoadOrdersAsync(db.Orders.Where(o => o.UserId == user.Id), ct)));
+        // Orders an admin has cancelled drop off the buyer's list.
+        return Ok(new ApiResponse<List<ShopOrderDto>>(await LoadOrdersAsync(db.Orders.Where(o => o.UserId == user.Id && o.Status != OrderStatuses.Cancelled), ct)));
     }
 
     [HttpGet("orders/{orderId:guid}"), Authorize]
@@ -135,6 +166,20 @@ public sealed class ShopController(AppDbContext db, PayUPaymentService payu, Use
         if (user is null) return Unauthorized();
         if (!await db.Orders.AnyAsync(o => o.Id == orderId && o.UserId == user.Id && o.Kind == OrderKinds.Shop, ct)) return NotFound();
         if (await db.Payments.AnyAsync(p => p.OrderId == orderId, ct)) await payu.ConfirmOrderAsync(orderId, ct);
+        return await Order(orderId, ct);
+    }
+
+    /// <summary>The buyer asks to cancel an order they haven't paid; an admin confirms it from the admin page.</summary>
+    [HttpPost("orders/{orderId:guid}/cancel"), Authorize]
+    public async Task<ActionResult<ApiResponse<ShopOrderDto>>> RequestCancellation(Guid orderId, CancellationToken ct)
+    {
+        var user = await users.GetUserAsync(User);
+        if (user is null) return Unauthorized();
+        var order = await db.Orders.FirstOrDefaultAsync(o => o.Id == orderId && o.UserId == user.Id && o.Kind == OrderKinds.Shop, ct);
+        if (order is null) return NotFound();
+        if (order.Status != "Pending") return BadRequest(new { error = "Only orders that haven't been paid can be cancelled." });
+        order.Status = OrderStatuses.CancelRequested;
+        await db.SaveChangesAsync(ct);
         return await Order(orderId, ct);
     }
 

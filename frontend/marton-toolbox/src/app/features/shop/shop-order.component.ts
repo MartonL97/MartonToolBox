@@ -1,5 +1,5 @@
 import { Component, OnDestroy, inject, signal } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { CartService, ShopOrder, money } from '../../core/shop/cart.service';
@@ -23,11 +23,29 @@ export class ShopOrderComponent implements OnDestroy {
   order = signal<ShopOrder | null>(null);
   error = signal('');
   timedOut = signal(false);
+  confirmCancel = signal(false);
+  cancelling = signal(false);
   shortId = signal(this.orderId.replace(/-/g, '').slice(0, 8).toUpperCase());
   money = money;
 
   constructor() {
     this.poll(0);
+  }
+
+  /** Asks the shop to cancel this unpaid order; an admin confirms it. */
+  async requestCancel() {
+    this.error.set('');
+    this.cancelling.set(true);
+    try {
+      const res = await firstValueFrom(this.http.post<{ data: ShopOrder }>(`/api/shop/orders/${this.orderId}/cancel`, {}));
+      clearTimeout(this.timer);
+      this.order.set(res.data);
+      this.confirmCancel.set(false);
+    } catch (err) {
+      this.error.set((err as HttpErrorResponse).error?.error ?? "Couldn't request cancellation. Please try again.");
+    } finally {
+      this.cancelling.set(false);
+    }
   }
 
   retry() {
@@ -43,7 +61,7 @@ export class ShopOrderComponent implements OnDestroy {
         this.cart.clear();
         return;
       }
-      if (res.data.status === 'Failed') return;
+      if (res.data.status !== 'Pending') return;
     } catch {
       if (!this.order()) {
         this.error.set("We couldn't find this order.");

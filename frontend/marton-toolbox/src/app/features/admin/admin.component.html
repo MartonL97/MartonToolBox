@@ -11,8 +11,13 @@
 
   @if (loaded()) {
     <div class="tabs">
-      <button [class.active]="tab() === 'orders'" (click)="tab.set('orders')">Product orders ({{ shopOrders().length }})</button>
+      <button [class.active]="tab() === 'orders'" (click)="tab.set('orders')">
+        Product orders ({{ shopOrders().length }}){{ cancelRequests() ? ' · ' + cancelRequests() + ' to cancel' : '' }}
+      </button>
       <button [class.active]="tab() === 'products'" (click)="tab.set('products')">Products ({{ products().length }})</button>
+      <button [class.active]="tab() === 'inventory'" (click)="openInventory()">
+        Inventory{{ stockAlerts().length ? ' (' + stockAlerts().length + ' low)' : '' }}
+      </button>
       <button [class.active]="tab() === 'licenses'" (click)="tab.set('licenses')">Active licenses ({{ licenses().length }})</button>
     </div>
 
@@ -23,7 +28,7 @@
             <div>
               <strong>Order {{ short(o.order.id) }}</strong>
               <span class="status-pill" [attr.data-status]="o.order.shippedAt ? 'shipped' : o.order.status.toLowerCase()">
-                {{ o.order.shippedAt ? 'Shipped' : o.order.status }}
+                {{ o.order.shippedAt ? 'Shipped' : statusLabels[o.order.status] }}
               </span>
               <p class="muted">{{ o.order.createdAt | date: 'd MMM y, HH:mm' }} · {{ o.userEmail }}</p>
               @for (i of o.order.items; track $index) {
@@ -57,8 +62,23 @@
                 </button>
               } @else if (o.order.shippedAt) {
                 <span class="muted">Shipped {{ o.order.shippedAt | date: 'd MMM y' }}</span>
+              } @else if (o.order.status === 'Pending' || o.order.status === 'CancelRequested') {
+                <span class="muted">{{ o.order.status === 'Pending' ? 'Waiting for payment' : 'Customer asked to cancel' }}</span>
+                <div class="row-buttons">
+                  @if (confirmCancel() === o.order.id) {
+                    <span class="muted">Cancel order {{ short(o.order.id) }}?</span>
+                    <button class="danger" (click)="cancelOrder(o)" [disabled]="busy() === o.order.id">
+                      {{ busy() === o.order.id ? 'Cancelling…' : 'Yes, cancel' }}
+                    </button>
+                    <button class="secondary" (click)="confirmCancel.set(null)">Keep</button>
+                  } @else {
+                    <button [class]="o.order.status === 'CancelRequested' ? 'primary' : 'secondary'" (click)="confirmCancel.set(o.order.id)">
+                      {{ o.order.status === 'CancelRequested' ? 'Approve cancellation' : 'Cancel order' }}
+                    </button>
+                  }
+                </div>
               } @else {
-                <span class="muted">Waiting for payment</span>
+                <span class="muted">{{ statusLabels[o.order.status] }}</span>
               }
               <div class="row-buttons">
                 @if (confirmDelete() === o.order.id) {
@@ -168,6 +188,79 @@
               }
             </div>
           </div>
+        }
+      </div>
+    }
+
+    @if (tab() === 'inventory') {
+      <div class="inventory-summary">
+        <div class="panel stat" data-level="out">
+          <strong>{{ outOfStockCount() }}</strong>
+          <span class="muted">out of stock</span>
+        </div>
+        <div class="panel stat" data-level="low">
+          <strong>{{ stockAlerts().length - outOfStockCount() }}</strong>
+          <span class="muted">low (≤ {{ inventory().lowStockThreshold }} left)</span>
+        </div>
+        <div class="panel stat">
+          <strong>{{ inventory().rows.length }}</strong>
+          <span class="muted">items tracked</span>
+        </div>
+      </div>
+      <p class="muted inventory-help">
+        <strong>On hand</strong> is what you have in stock (paid orders are already taken off, including ones still to ship).
+        <strong>Reserved</strong> is held by checkouts started in the last {{ inventory().reservationMinutes }} minutes that aren't paid yet.
+        Shoppers can buy only what's <strong>available</strong>, so an item can't be sold twice.
+      </p>
+      <label class="inline only-alerts">
+        <input type="checkbox" [checked]="showOnlyAlerts()" (change)="showOnlyAlerts.set(!showOnlyAlerts())" />
+        Show only items that need restocking
+      </label>
+      <div class="list">
+        <div class="inventory-row inventory-head muted">
+          <span>Item</span>
+          <span>On hand</span>
+          <span>Reserved</span>
+          <span>To ship</span>
+          <span>Available</span>
+          <span></span>
+        </div>
+        @for (r of visibleRows(); track rowKey(r)) {
+          <div class="panel inventory-row" [attr.data-level]="level(r)">
+            <div>
+              <strong>{{ r.productName }}</strong>
+              @if (r.size) {
+                <span class="size-tag">{{ r.size }}</span>
+              }
+              @if (!r.isActive) {
+                <span class="muted">· hidden</span>
+              }
+            </div>
+            <div class="stock-edit">
+              <input
+                type="number"
+                min="0"
+                step="1"
+                [value]="pendingStock(r) ?? r.onHand"
+                (input)="editStock(r, $event)"
+                (keydown.enter)="saveStock(r)"
+                [attr.aria-label]="'On hand for ' + r.productName + (r.size ? ' size ' + r.size : '')"
+              />
+              @if (pendingStock(r) !== null) {
+                <button class="primary" (click)="saveStock(r)" [disabled]="busy() === rowKey(r)">
+                  {{ busy() === rowKey(r) ? 'Saving…' : 'Save' }}
+                </button>
+              }
+            </div>
+            <span>{{ r.reserved }}</span>
+            <span>{{ r.awaitingShipment }}</span>
+            <strong>{{ r.available }}</strong>
+            <span class="status-pill" [attr.data-status]="level(r) === 'ok' ? 'shipped' : level(r)">
+              {{ level(r) === 'out' ? 'Out of stock' : level(r) === 'low' ? 'Low stock' : 'In stock' }}
+            </span>
+          </div>
+        } @empty {
+          <p class="empty-preview">{{ showOnlyAlerts() ? 'Everything is well stocked.' : 'No products yet.' }}</p>
         }
       </div>
     }

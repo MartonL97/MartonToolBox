@@ -239,3 +239,6 @@
 /Users/lakatosmarton/Desktop/MartonToolbox Repo/backend/MartonToolBox.Tests/obj/Debug/net8.0/MartonToolBox.Tests.pdb
 /Users/lakatosmarton/Desktop/MartonToolbox Repo/backend/MartonToolBox.Tests/obj/Debug/net8.0/MartonToolBox.Tests.genruntimeconfig.cache
 /Users/lakatosmarton/Desktop/MartonToolbox Repo/backend/MartonToolBox.Tests/obj/Debug/net8.0/ref/MartonToolBox.Tests.dll
+/Users/lakatosmarton/Desktop/MartonToolbox Repo/backend/MartonToolBox.Tests/bin/Debug/net8.0/BouncyCastle.Cryptography.dll
+/Users/lakatosmarton/Desktop/MartonToolbox Repo/backend/MartonToolBox.Tests/bin/Debug/net8.0/MailKit.dll
+/Users/lakatosmarton/Desktop/MartonToolbox Repo/backend/MartonToolBox.Tests/bin/Debug/net8.0/MimeKit.dll

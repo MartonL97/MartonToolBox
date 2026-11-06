@@ -147,7 +147,7 @@ public sealed class PayUPaymentService(HttpClient http, AppDbContext db, ILicens
     {
         // Final states never change on PayU's side, so skip the round-trip.
         if (order.Status == "Paid") return new OrderConfirmation(OrderState.Completed, false);
-        if (order.Status == "Failed") return new OrderConfirmation(OrderState.Failed, false);
+        if (order.Status is "Failed" or OrderStatuses.Cancelled) return new OrderConfirmation(OrderState.Failed, false);
 
         using var request = new HttpRequestMessage(HttpMethod.Get, $"api/v2_1/orders/{Uri.EscapeDataString(payment.ProviderReference)}");
         request.Headers.Authorization = new("Bearer", await GetAccessTokenAsync(ct));
@@ -163,7 +163,8 @@ public sealed class PayUPaymentService(HttpClient http, AppDbContext db, ILicens
             "CANCELED" => OrderState.Failed,
             _ => OrderState.Pending // NEW, PENDING, WAITING_FOR_CONFIRMATION
         };
-        order.Status = state switch { OrderState.Completed => "Paid", OrderState.Failed => "Failed", _ => "Pending" };
+        // A cancellation request stays visible until an admin acts on it, unless PayU reaches a final state first.
+        order.Status = state switch { OrderState.Completed => "Paid", OrderState.Failed => "Failed", _ => order.Status == OrderStatuses.CancelRequested ? order.Status : "Pending" };
 
         var licenseGranted = false;
         if (state == OrderState.Completed && order.Kind == OrderKinds.Shop)
@@ -188,6 +189,26 @@ public sealed class PayUPaymentService(HttpClient http, AppDbContext db, ILicens
         await db.SaveChangesAsync(ct);
 
         return new OrderConfirmation(state, licenseGranted);
+    }
+
+    /// <summary>
+    /// Cancels an unpaid order at PayU too, so its payment page stops accepting payment. Returns false when
+    /// PayU reports the order as paid: money has been taken, so it must be handled as a paid order instead.
+    /// </summary>
+    public async Task<bool> CancelOrderAsync(Guid orderId, CancellationToken ct = default)
+    {
+        var order = await db.Orders.FirstOrDefaultAsync(o => o.Id == orderId, ct) ?? throw new KeyNotFoundException("Order not found.");
+        var payment = await db.Payments.FirstOrDefaultAsync(p => p.OrderId == orderId, ct);
+        if (payment is null) return true; // Never reached PayU.
+        var state = (await SyncAsync(order, payment, ct)).State;
+        if (state == OrderState.Completed) return false;
+        if (state == OrderState.Failed) return true; // Already cancelled or expired at PayU.
+
+        using var request = new HttpRequestMessage(HttpMethod.Delete, $"api/v2_1/orders/{Uri.EscapeDataString(payment.ProviderReference)}");
+        request.Headers.Authorization = new("Bearer", await GetAccessTokenAsync(ct));
+        using var response = await http.SendAsync(request, ct);
+        // PayU refuses to cancel an order that got paid in the meantime; the re-check catches that race.
+        return response.IsSuccessStatusCode || (await SyncAsync(order, payment, ct)).State != OrderState.Completed;
     }
 
     private async Task<string> GetAccessTokenAsync(CancellationToken ct)

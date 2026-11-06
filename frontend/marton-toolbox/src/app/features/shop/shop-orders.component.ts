@@ -3,7 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { DatePipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
-import { ShopOrder, money } from '../../core/shop/cart.service';
+import { ORDER_STATUS_LABELS, ShopOrder, money } from '../../core/shop/cart.service';
 import { IconComponent } from '../../core/ui/icon.component';
 
 @Component({
@@ -33,6 +33,6 @@ export class ShopOrdersComponent {
     return o.shippedAt ? 'shipped' : o.status.toLowerCase();
   }
   statusLabel(o: ShopOrder) {
-    return o.shippedAt ? 'Shipped' : { Paid: 'Paid', Pending: 'Awaiting payment', Failed: 'Not paid' }[o.status];
+    return o.shippedAt ? 'Shipped' : ORDER_STATUS_LABELS[o.status];
   }
 }
