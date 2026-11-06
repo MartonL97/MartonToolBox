@@ -10,7 +10,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace MartonToolBox.Api.Controllers;
 
-public sealed record ActiveLicenseDto(string UserEmail, string DisplayName, string LicenseKey, string Product, DateTimeOffset PurchasedAt, DateTimeOffset? ExpiresAt);
+public sealed record ActiveLicenseDto(Guid Id, string UserEmail, string DisplayName, string LicenseKey, string Product, DateTimeOffset PurchasedAt, DateTimeOffset? ExpiresAt);
 public sealed record AdminSizeDto(string Size, int Stock);
 public sealed record AdminProductDto(Guid Id, string Slug, string Name, string Description, decimal Price, string Currency, string? ImageUrl, int Stock, bool IsActive, int SortOrder, IReadOnlyList<AdminSizeDto> Sizes);
 public sealed record SaveSizeRequest([Required, StringLength(20, MinimumLength = 1)] string Size, [Range(0, 1_000_000)] int Stock);
@@ -30,22 +30,36 @@ public sealed record SetVisibilityRequest(bool IsActive);
 public sealed record AdminShopOrderDto(ShopOrderDto Order, string UserEmail, string? ShippingName, string? ShippingPhone, string? ShippingAddress, string? ShippingCity, string? ShippingCounty, string? ShippingPostalCode);
 
 /// <summary>
-/// Store administration: shop products and orders, plus a read-only list of active licenses.
+/// Store administration: shop products and orders, plus the list of active licenses (which can be revoked).
 /// Only users with the Admin role, checked per request, can call these.
 /// </summary>
 [ApiController, Route("api/admin"), Authorize(Policy = AdminPolicy.Name)]
 public sealed class AdminController(AppDbContext db, IConfiguration configuration) : ControllerBase
 {
-    /// <summary>Everyone with an active license, newest first (read-only overview).</summary>
+    /// <summary>Everyone with an active license, newest first.</summary>
     [HttpGet("licenses")]
     public async Task<ActionResult<ApiResponse<List<ActiveLicenseDto>>>> ActiveLicenses(CancellationToken ct)
     {
         var licenses = await db.Licenses
             .Where(l => l.Status == LicenseStatus.Active)
             .OrderByDescending(l => l.PurchasedAt)
-            .Join(db.Users, l => l.UserId, u => u.Id, (l, u) => new ActiveLicenseDto(u.Email!, u.DisplayName, l.LicenseKey, l.Product.ToString(), l.PurchasedAt, l.ExpiresAt))
+            .Join(db.Users, l => l.UserId, u => u.Id, (l, u) => new ActiveLicenseDto(l.Id, u.Email!, u.DisplayName, l.LicenseKey, l.Product.ToString(), l.PurchasedAt, l.ExpiresAt))
             .ToListAsync(ct);
         return Ok(new ApiResponse<List<ActiveLicenseDto>>(licenses));
+    }
+
+    /// <summary>
+    /// Takes the license away: it is marked Revoked rather than deleted, so the key stays unique and the
+    /// record remains for history. The user loses tool access on their next request.
+    /// </summary>
+    [HttpDelete("licenses/{id:guid}")]
+    public async Task<IActionResult> RevokeLicense(Guid id, CancellationToken ct)
+    {
+        var license = await db.Licenses.FirstOrDefaultAsync(l => l.Id == id, ct);
+        if (license is null) return NotFound();
+        license.Status = LicenseStatus.Revoked;
+        await db.SaveChangesAsync(ct);
+        return Ok(new ApiResponse<Guid>(id));
     }
 
     [HttpGet("shop/products")]
@@ -129,6 +143,35 @@ public sealed class AdminController(AppDbContext db, IConfiguration configuratio
         order.ShippedAt ??= DateTimeOffset.UtcNow;
         await db.SaveChangesAsync(ct);
         return Ok(new ApiResponse<string>("Shipped"));
+    }
+
+    /// <summary>
+    /// Permanently removes a shop order with its lines and payment records. A paid order that has not shipped
+    /// gives its items back to stock, since the goods never left.
+    /// </summary>
+    [HttpDelete("shop/orders/{orderId:guid}")]
+    public async Task<IActionResult> DeleteOrder(Guid orderId, CancellationToken ct)
+    {
+        var order = await db.Orders.FirstOrDefaultAsync(o => o.Id == orderId && o.Kind == OrderKinds.Shop, ct);
+        if (order is null) return NotFound();
+        var items = await db.OrderItems.Where(i => i.OrderId == orderId).ToListAsync(ct);
+        if (order.Status == "Paid" && order.ShippedAt is null)
+        {
+            var productIds = items.Select(i => i.ProductId).ToList();
+            var products = await db.ShopProducts.Where(p => productIds.Contains(p.Id)).ToDictionaryAsync(p => p.Id, ct);
+            var variantIds = items.Where(i => i.VariantId != null).Select(i => i.VariantId!.Value).ToList();
+            var variants = await db.ShopProductVariants.Where(v => variantIds.Contains(v.Id)).ToDictionaryAsync(v => v.Id, ct);
+            foreach (var item in items)
+            {
+                if (item.VariantId is { } vid && variants.TryGetValue(vid, out var variant)) variant.Stock += item.Quantity;
+                else if (products.TryGetValue(item.ProductId, out var product)) product.Stock += item.Quantity;
+            }
+        }
+        db.OrderItems.RemoveRange(items);
+        db.Payments.RemoveRange(await db.Payments.Where(p => p.OrderId == orderId).ToListAsync(ct));
+        db.Orders.Remove(order);
+        await db.SaveChangesAsync(ct);
+        return Ok(new ApiResponse<Guid>(orderId));
     }
 
     private static void Apply(ShopProduct product, SaveProductRequest r)

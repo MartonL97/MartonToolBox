@@ -53,4 +53,10 @@ describe('DashboardComponent', () => {
   it('uses a neutral label for visitors', () => {
     expect(text(setup().el.querySelector('.hero .eyebrow'))).toBe('Your everyday toolbox');
   });
+
+  it('points to the products shop', () => {
+    const { el } = setup();
+    expect(text(el.querySelector('.hero .lead'))).toContain('useful products from Marton');
+    expect(el.querySelector('.products-banner')?.getAttribute('href')).toBe('/shop');
+  });
 });

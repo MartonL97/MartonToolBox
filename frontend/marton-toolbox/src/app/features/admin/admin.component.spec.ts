@@ -37,6 +37,7 @@ const ORDER = {
   shippingPostalCode: '400001',
 };
 const LICENSE = {
+  id: 'l1',
   userEmail: 'maria@example.com',
   displayName: 'Maria',
   licenseKey: 'MTB-KEY',
@@ -60,7 +61,7 @@ describe('AdminComponent', () => {
   it('loads orders, products and licenses with counts on the tabs', async () => {
     const { el } = await setup();
     expect(Array.from(el.querySelectorAll('.tabs button')).map((b) => text(b))).toEqual([
-      'Shop orders (1)',
+      'Product orders (1)',
       'Products (1)',
       'Active licenses (1)',
     ]);
@@ -130,12 +131,46 @@ describe('AdminComponent', () => {
     expect(component.form().id).toBeNull(); // form resets after saving
   });
 
-  it('lists active licenses (read-only)', async () => {
+  it('lists active licenses', async () => {
     const { el, fixture } = await setup();
     click(tab(el, 'Active licenses'));
     fixture.detectChanges();
     expect(text(el.querySelector('.license-key'))).toBe('MTB-KEY');
     expect(el.textContent).toContain('maria@example.com');
     expect(el.textContent).not.toContain('Approve');
+  });
+
+  it('asks for confirmation before deleting an order', async () => {
+    const { el, http, fixture, component } = await setup();
+    click(Array.from(el.querySelectorAll('.row-buttons button')).find((b) => text(b) === 'Delete order'));
+    fixture.detectChanges();
+    http.expectNone(`/api/admin/shop/orders/${ORDER.order.id}`);
+    expect(el.textContent).toContain('Delete order AAAABBBB?');
+
+    click(el.querySelector('.row-buttons .danger'));
+    const req = http.expectOne(`/api/admin/shop/orders/${ORDER.order.id}`);
+    expect(req.request.method).toBe('DELETE');
+    req.flush({ data: ORDER.order.id });
+    await settle(fixture);
+    http.expectOne('/api/admin/shop/products').flush({ data: [PRODUCT] });
+    await settle(fixture);
+    expect(component.shopOrders()).toEqual([]);
+  });
+
+  it('asks for confirmation before removing a license', async () => {
+    const { el, http, fixture, component } = await setup();
+    click(tab(el, 'Active licenses'));
+    fixture.detectChanges();
+    click(Array.from(el.querySelectorAll('.row-buttons button')).find((b) => text(b) === 'Remove license'));
+    fixture.detectChanges();
+    http.expectNone('/api/admin/licenses/l1');
+    expect(el.textContent).toContain('Remove license from maria@example.com?');
+
+    click(el.querySelector('.row-buttons .danger'));
+    const req = http.expectOne('/api/admin/licenses/l1');
+    expect(req.request.method).toBe('DELETE');
+    req.flush({ data: 'l1' });
+    await settle(fixture);
+    expect(component.licenses()).toEqual([]);
   });
 });

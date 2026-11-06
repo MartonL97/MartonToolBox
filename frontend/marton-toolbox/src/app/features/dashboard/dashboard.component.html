@@ -6,7 +6,10 @@
         Useful tools,
         <span class="hero-accent">without the busywork.</span>
       </h1>
-      <p class="lead">Fast, private utilities for the small jobs that keep your work moving.</p>
+      <p class="lead">
+        Fast, private utilities for the small jobs that keep your work moving, plus a shop of useful products from Marton,
+        delivered across Romania.
+      </p>
       <label class="search">
         <mtb-icon name="search" />
         <input [value]="query()" (input)="query.set($any($event.target).value)" placeholder="Search tools…" />
@@ -23,6 +26,10 @@
         <span>
           <mtb-icon name="card" />
           One-time payment
+        </span>
+        <span>
+          <mtb-icon name="bag" />
+          Useful products
         </span>
       </div>
     </div>
@@ -60,4 +67,16 @@
       <p class="empty-preview">No tools match “{{ query() }}”.</p>
     }
   </div>
+
+  <a class="products-banner" routerLink="/shop">
+    <span class="products-icon"><mtb-icon name="bag" /></span>
+    <div>
+      <h2>More than tools: useful products from Marton's shop</h2>
+      <p>Hand-picked items, starting with the MartonToolBox T-shirt, shipped to your door across Romania.</p>
+    </div>
+    <span class="open">
+      Browse products
+      <span class="open-arrow"><mtb-icon name="arrow" /></span>
+    </span>
+  </a>
 </section>

@@ -1,7 +1,7 @@
 <section class="page">
   <p class="eyebrow">Admin</p>
   <h1>Store admin</h1>
-  <p class="lead" style="margin-bottom: 22px">Manage shop products, ship orders, and see who has a license.</p>
+  <p class="lead" style="margin-bottom: 22px">Manage products, ship orders, and manage who has a license.</p>
   @if (loading() && !loaded()) {
     <p class="empty-preview">Loading…</p>
   }
@@ -11,7 +11,7 @@
 
   @if (loaded()) {
     <div class="tabs">
-      <button [class.active]="tab() === 'orders'" (click)="tab.set('orders')">Shop orders ({{ shopOrders().length }})</button>
+      <button [class.active]="tab() === 'orders'" (click)="tab.set('orders')">Product orders ({{ shopOrders().length }})</button>
       <button [class.active]="tab() === 'products'" (click)="tab.set('products')">Products ({{ products().length }})</button>
       <button [class.active]="tab() === 'licenses'" (click)="tab.set('licenses')">Active licenses ({{ licenses().length }})</button>
     </div>
@@ -60,10 +60,21 @@
               } @else {
                 <span class="muted">Waiting for payment</span>
               }
+              <div class="row-buttons">
+                @if (confirmDelete() === o.order.id) {
+                  <span class="muted">Delete order {{ short(o.order.id) }}?</span>
+                  <button class="danger" (click)="deleteOrder(o)" [disabled]="busy() === o.order.id">
+                    {{ busy() === o.order.id ? 'Deleting…' : 'Yes, delete' }}
+                  </button>
+                  <button class="secondary" (click)="confirmDelete.set(null)">Cancel</button>
+                } @else {
+                  <button class="secondary danger-text" (click)="confirmDelete.set(o.order.id)">Delete order</button>
+                }
+              </div>
             </div>
           </div>
         } @empty {
-          <p class="empty-preview">No shop orders yet.</p>
+          <p class="empty-preview">No product orders yet.</p>
         }
       </div>
     }
@@ -148,7 +159,7 @@
                   class="secondary"
                   (click)="toggleVisible(p)"
                   [disabled]="busy() === p.id"
-                  [title]="p.isActive ? 'Hide from the shop' : 'Show in the shop'"
+                  [title]="p.isActive ? 'Hide from Products' : 'Show in Products'"
                 >
                   {{ p.isActive ? 'Hide' : 'Show' }}
                 </button>
@@ -163,7 +174,7 @@
 
     @if (tab() === 'licenses') {
       <div class="list">
-        @for (l of licenses(); track l.licenseKey) {
+        @for (l of licenses(); track l.id) {
           <div class="panel admin-order">
             <div>
               <strong>{{ l.displayName }}</strong>
@@ -178,7 +189,18 @@
                 }
               </p>
             </div>
-            <span class="status-pill" data-status="shipped">Active</span>
+            <div class="row-buttons">
+              <span class="status-pill" data-status="shipped">Active</span>
+              @if (confirmDelete() === l.id) {
+                <span class="muted">Remove license from {{ l.userEmail }}?</span>
+                <button class="danger" (click)="revokeLicense(l)" [disabled]="busy() === l.id">
+                  {{ busy() === l.id ? 'Removing…' : 'Yes, remove' }}
+                </button>
+                <button class="secondary" (click)="confirmDelete.set(null)">Cancel</button>
+              } @else {
+                <button class="secondary danger-text" (click)="confirmDelete.set(l.id)">Remove license</button>
+              }
+            </div>
           </div>
         } @empty {
           <p class="empty-preview">No active licenses yet.</p>

@@ -1,1 +1,74 @@
 // Page-specific styles. Shared design tokens and layout live in src/styles.scss.
+
+.products-banner {
+  --tone-a: #8b5cf6;
+  --tone-b: #6366f1;
+  --tone-ink: #6d28d9;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  margin-top: 28px;
+  padding: 22px 24px;
+  border-radius: var(--radius-lg);
+  border: 1px solid #c7d2fe;
+  background: radial-gradient(420px 160px at 100% 0%, rgba(124, 58, 237, 0.1), transparent 70%), var(--surface);
+  box-shadow: var(--shadow-md);
+  color: inherit;
+  text-decoration: none;
+  transition: transform 0.15s ease;
+
+  &:hover {
+    transform: translateY(-2px);
+  }
+
+  div {
+    flex: 1;
+    min-width: 0;
+  }
+
+  h2 {
+    margin: 0 0 4px;
+    font: 700 18px var(--display);
+  }
+
+  p {
+    margin: 0;
+    color: var(--text-2);
+    font-size: 14px;
+  }
+
+  .open {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--tone-ink);
+    white-space: nowrap;
+  }
+
+  &:hover .open-arrow {
+    transform: translateX(4px);
+    background: linear-gradient(135deg, var(--tone-a), var(--tone-b));
+    color: #fff;
+  }
+}
+
+.products-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  color: #fff;
+  background: var(--gradient);
+  --icon-size: 22px;
+}
+
+@media (max-width: 640px) {
+  .products-banner {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}

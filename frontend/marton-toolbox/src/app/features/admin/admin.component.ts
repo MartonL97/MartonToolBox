@@ -5,6 +5,7 @@ import { firstValueFrom } from 'rxjs';
 import { ShopOrder, money } from '../../core/shop/cart.service';
 
 interface ActiveLicense {
+  id: string;
   userEmail: string;
   displayName: string;
   licenseKey: string;
@@ -86,7 +87,7 @@ export class AdminComponent {
   shopOrders = signal<AdminShopOrder[]>([]);
   products = signal<AdminProduct[]>([]);
   form = signal<ProductForm>(emptyProduct());
-  /** Product id awaiting a second click to confirm deletion. */
+  /** Product, order or license id awaiting a second click to confirm deletion. */
   confirmDelete = signal<string | null>(null);
   emptyProduct = emptyProduct;
   money = money;
@@ -107,6 +108,24 @@ export class AdminComponent {
       await firstValueFrom(this.http.delete(`/api/admin/shop/products/${p.id}`));
       this.products.update((list) => list.filter((x) => x.id !== p.id));
       if (this.form().id === p.id) this.form.set(emptyProduct());
+      this.confirmDelete.set(null);
+    });
+  }
+
+  async deleteOrder(o: AdminShopOrder) {
+    await this.run(o.order.id, async () => {
+      await firstValueFrom(this.http.delete(`/api/admin/shop/orders/${o.order.id}`));
+      this.shopOrders.update((list) => list.filter((x) => x.order.id !== o.order.id));
+      this.confirmDelete.set(null);
+      // A paid, unshipped order returns its items to stock.
+      this.products.set(await this.get<AdminProduct[]>('/api/admin/shop/products'));
+    });
+  }
+
+  async revokeLicense(l: ActiveLicense) {
+    await this.run(l.id, async () => {
+      await firstValueFrom(this.http.delete(`/api/admin/licenses/${l.id}`));
+      this.licenses.update((list) => list.filter((x) => x.id !== l.id));
       this.confirmDelete.set(null);
     });
   }
