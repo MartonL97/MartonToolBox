@@ -92,7 +92,10 @@ public sealed class AuthController(
             return BadRequest(new { errors = result.Errors.Select(e => new { e.Code, e.Description }) });
         }
 
-        // Receiving the link proves the user owns the inbox, so this also activates an unconfirmed account.
+        // Receiving the link proves the user owns the inbox, so this also activates an unconfirmed account
+        // and lifts a wrong-password lockout.
+        await users.SetLockoutEndDateAsync(user, null);
+        await users.ResetAccessFailedCountAsync(user);
         if (!user.EmailConfirmed) { user.EmailConfirmed = true; await users.UpdateAsync(user); }
         return Ok(new ApiResponse<AuthResult>(CreateResult(user)));
     }
@@ -101,10 +104,35 @@ public sealed class AuthController(
     public async Task<ActionResult<ApiResponse<AuthResult>>> Login(LoginRequest request)
     {
         var user = await users.FindByEmailAsync(request.Email);
-        if (user is null || !user.IsActive || !await users.CheckPasswordAsync(user, request.Password)) return Unauthorized(new { error = "Invalid email or password." });
+        if (user is null || !user.IsActive) return Unauthorized(new { error = "Invalid email or password." });
+        // Checked before the password so a locked account can't keep being guessed at.
+        if (await users.IsLockedOutAsync(user)) return await LockedOutAsync(user);
+        if (!await users.CheckPasswordAsync(user, request.Password))
+        {
+            // The fifth wrong password in a row locks the account (Identity lockout options).
+            await users.AccessFailedAsync(user);
+            if (await users.IsLockedOutAsync(user))
+            {
+                logger.LogWarning("Account {UserId} locked after repeated wrong passwords.", user.Id);
+                return await LockedOutAsync(user);
+            }
+            return Unauthorized(new { error = "Invalid email or password." });
+        }
+        await users.ResetAccessFailedCountAsync(user);
         // Checked after the password, so this only reveals the account state to its owner.
         if (!user.EmailConfirmed) return StatusCode(StatusCodes.Status403Forbidden, new { error = "Please confirm your email first. Check your inbox for the confirmation link.", code = "email_not_confirmed" });
         return Ok(new ApiResponse<AuthResult>(CreateResult(user)));
+    }
+
+    private async Task<ObjectResult> LockedOutAsync(AppUser user)
+    {
+        var end = await users.GetLockoutEndDateAsync(user) ?? DateTimeOffset.UtcNow;
+        var minutes = Math.Max(1, (int)Math.Ceiling((end - DateTimeOffset.UtcNow).TotalMinutes));
+        return StatusCode(StatusCodes.Status423Locked, new
+        {
+            error = $"Too many wrong password attempts. Try again in {minutes} minute{(minutes == 1 ? "" : "s")}, or reset your password.",
+            code = "locked_out"
+        });
     }
 
     [HttpPost("refresh")]

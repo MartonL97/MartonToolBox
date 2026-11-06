@@ -17,6 +17,8 @@ export class LoginComponent {
   loading = signal(false);
   error = signal('');
   unconfirmed = signal(false);
+  /** Too many wrong passwords; resetting the password unlocks the account. */
+  lockedOut = signal(false);
   resending = signal(false);
   resent = signal(false);
   sessionExpired = signal(this.route.snapshot.queryParamMap.get('expired') === '1');
@@ -25,6 +27,7 @@ export class LoginComponent {
     event.preventDefault();
     this.error.set('');
     this.unconfirmed.set(false);
+    this.lockedOut.set(false);
     this.resent.set(false);
     this.loading.set(true);
     try {
@@ -32,6 +35,7 @@ export class LoginComponent {
       this.router.navigateByUrl(safeReturnUrl(this.route.snapshot.queryParamMap.get('returnUrl')));
     } catch (err: any) {
       this.unconfirmed.set(err?.error?.code === 'email_not_confirmed');
+      this.lockedOut.set(err?.error?.code === 'locked_out');
       this.error.set(extractAuthError(err));
     } finally {
       this.loading.set(false);

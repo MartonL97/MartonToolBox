@@ -21,6 +21,9 @@
       @if (error()) {
         <p class="error-text">{{ error() }}</p>
       }
+      @if (lockedOut()) {
+        <a class="secondary" routerLink="/forgot-password" [queryParams]="{ email: email() }">Reset password</a>
+      }
       @if (unconfirmed()) {
         <button class="secondary" type="button" (click)="resend()" [disabled]="resending() || resent()">
           {{ resent() ? 'Sent — check your inbox' : resending() ? 'Sending…' : 'Resend confirmation email' }}

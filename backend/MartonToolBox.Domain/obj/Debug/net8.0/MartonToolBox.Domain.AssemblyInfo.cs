@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("MartonToolBox.Domain")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+d3f2ec333f160989a459dd715747d02933d787d3")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+8ba25cbda4179bc7bf78407fdc0e7074349dab99")]
 [assembly: System.Reflection.AssemblyProductAttribute("MartonToolBox.Domain")]
 [assembly: System.Reflection.AssemblyTitleAttribute("MartonToolBox.Domain")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

@@ -23,6 +23,10 @@ public static class DependencyInjection
             {
                 options.User.RequireUniqueEmail = true;
                 options.Password.RequiredLength = 8;
+                // Login counts wrong passwords itself (AuthController.Login); these set the limit and the wait.
+                options.Lockout.MaxFailedAccessAttempts = 5;
+                options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(15);
+                options.Lockout.AllowedForNewUsers = true;
                 options.Tokens.PasswordResetTokenProvider = PasswordResetTokenProvider<AppUser>.ProviderName;
             })
             .AddRoles<IdentityRole<Guid>>().AddEntityFrameworkStores<AppDbContext>().AddDefaultTokenProviders()

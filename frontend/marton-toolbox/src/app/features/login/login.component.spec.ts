@@ -46,6 +46,22 @@ describe('LoginComponent', () => {
     expect(el.textContent).not.toContain('Resend confirmation email');
   });
 
+  it('offers a password reset when the account is locked', async () => {
+    const { el, http, harness, fill, submit } = await setup();
+    fill('maria@example.com', 'nope');
+    submit();
+    http
+      .expectOne('/api/auth/login')
+      .flush(
+        { error: 'Too many wrong password attempts. Try again in 15 minutes, or reset your password.', code: 'locked_out' },
+        { status: 423, statusText: 'Locked' },
+      );
+    await settle(harness);
+    expect(text(el.querySelector('.error-text'))).toContain('Too many wrong password attempts');
+    const reset = Array.from(el.querySelectorAll('form a')).find((a) => text(a) === 'Reset password')!;
+    expect(reset.getAttribute('href')).toBe('/forgot-password?email=maria@example.com');
+  });
+
   it('offers to resend the confirmation email for unconfirmed accounts', async () => {
     const { el, http, harness, fill, submit } = await setup();
     fill('new@example.com', 'Passw0rd!');
