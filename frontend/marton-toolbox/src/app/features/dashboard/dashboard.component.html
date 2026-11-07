@@ -1,53 +1,79 @@
 <section class="page">
   <div class="hero">
     <div class="hero-copy">
-      <p class="eyebrow">{{ auth.user() ? 'Welcome back, ' + firstName() : 'Your everyday toolbox' }}</p>
+      <p class="eyebrow">{{ auth.user() ? 'Welcome back, ' + firstName() : "Marton's shop & toolbox" }}</p>
       <h1>
-        Useful tools,
-        <span class="hero-accent">without the busywork.</span>
+        Useful products,
+        <span class="hero-accent">delivered to your door.</span>
       </h1>
       <p class="lead">
-        Fast, private utilities for the small jobs that keep your work moving, plus a shop of useful products from Marton,
-        delivered across Romania.
+        Hand-picked products from Marton's shop, shipped across Romania, plus fast, private tools for the small jobs that
+        keep your work moving.
       </p>
-      <label class="search">
-        <mtb-icon name="search" />
-        <input [value]="query()" (input)="query.set($any($event.target).value)" placeholder="Search tools…" />
-      </label>
+      <div class="hero-actions">
+        <a class="primary hero-cta" routerLink="/shop">
+          <mtb-icon name="bag" />
+          Shop products
+        </a>
+        <a class="hero-link" href="#tools" (click)="scrollToTools($event)">
+          Explore tools
+          <mtb-icon name="arrow" />
+        </a>
+      </div>
       <div class="hero-points">
         <span>
-          <mtb-icon name="shield" />
-          Private by design
+          <mtb-icon name="package" />
+          Shipped across Romania
         </span>
+        @if (cart.catalog(); as c) {
+          <span>
+            <mtb-icon name="bag" />
+            Free shipping over {{ money(c.freeShippingOver, c.currency) }}
+          </span>
+        }
         <span>
-          <mtb-icon name="bolt" />
-          Instant results
+          <mtb-icon name="shield" />
+          Private tools
         </span>
         <span>
           <mtb-icon name="card" />
           One-time payment
         </span>
-        <span>
-          <mtb-icon name="bag" />
-          Useful products
-        </span>
       </div>
     </div>
     <div class="hero-art" aria-hidden="true">
-      <span class="float-tile t1"><mtb-icon name="file" /></span>
+      <span class="float-tile t1"><mtb-icon name="bag" /></span>
       <span class="float-tile t2"><mtb-icon name="sparkles" /></span>
-      <span class="float-tile t3"><mtb-icon name="table" /></span>
-      <span class="float-tile t4"><mtb-icon name="image" /></span>
-      <span class="float-tile t5"><mtb-icon name="convert" /></span>
+      <span class="float-tile t3"><mtb-icon name="package" /></span>
+      <span class="float-tile t4"><mtb-icon name="cart" /></span>
+      <span class="float-tile t5"><mtb-icon name="file" /></span>
     </div>
   </div>
 
-  <div class="section-heading">
+  <a class="products-banner" routerLink="/shop">
+    <span class="products-icon"><mtb-icon name="bag" /></span>
+    <div>
+      <h2>Useful products from Marton's shop</h2>
+      <p>Hand-picked items, starting with the MartonToolBox T-shirt, shipped to your door across Romania.</p>
+    </div>
+    <span class="open">
+      Browse products
+      <span class="open-arrow"><mtb-icon name="arrow" /></span>
+    </span>
+  </a>
+
+  <div class="section-heading tools-heading" id="tools">
     <div>
       <h2>Your toolbox</h2>
-      <p>Pick a tool to get started.</p>
+      <p>Fast, private utilities. Pick a tool to get started.</p>
     </div>
-    <span class="count">{{ filtered().length }} {{ filtered().length === 1 ? 'tool' : 'tools' }}</span>
+    <div class="tools-controls">
+      <label class="search">
+        <mtb-icon name="search" />
+        <input [value]="query()" (input)="query.set($any($event.target).value)" placeholder="Search tools…" />
+      </label>
+      <span class="count">{{ filtered().length }} {{ filtered().length === 1 ? 'tool' : 'tools' }}</span>
+    </div>
   </div>
   <div class="tool-grid">
     @for (tool of filtered(); track tool.slug) {
@@ -67,16 +93,4 @@
       <p class="empty-preview">No tools match “{{ query() }}”.</p>
     }
   </div>
-
-  <a class="products-banner" routerLink="/shop">
-    <span class="products-icon"><mtb-icon name="bag" /></span>
-    <div>
-      <h2>More than tools: useful products from Marton's shop</h2>
-      <p>Hand-picked items, starting with the MartonToolBox T-shirt, shipped to your door across Romania.</p>
-    </div>
-    <span class="open">
-      Browse products
-      <span class="open-arrow"><mtb-icon name="arrow" /></span>
-    </span>
-  </a>
 </section>

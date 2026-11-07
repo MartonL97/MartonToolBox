@@ -9,17 +9,10 @@
         <mtb-icon name="dashboard" />
         Dashboard
       </a>
-      <p>Tools</p>
-      @for (item of nav; track item.path) {
-        <a [routerLink]="item.path" routerLinkActive="active">
-          <mtb-icon [name]="item.icon" />
-          {{ item.label }}
-        </a>
-      }
       <p>Products</p>
-      <a routerLink="/shop" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+      <a class="nav-shop" routerLink="/shop" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
         <mtb-icon name="bag" />
-        Products
+        Shop
       </a>
       <a routerLink="/shop/cart" routerLinkActive="active">
         <mtb-icon name="cart" />
@@ -32,6 +25,13 @@
         <a routerLink="/shop/orders" routerLinkActive="active">
           <mtb-icon name="package" />
           My orders
+        </a>
+      }
+      <p>Tools</p>
+      @for (item of nav; track item.path) {
+        <a [routerLink]="item.path" routerLinkActive="active">
+          <mtb-icon [name]="item.icon" />
+          {{ item.label }}
         </a>
       }
       <p>Account</p>

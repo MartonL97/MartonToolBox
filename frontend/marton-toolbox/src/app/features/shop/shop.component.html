@@ -26,8 +26,44 @@
     <div class="product-grid"><div class="product-card skeleton"></div></div>
   }
 
+  @if (products().length) {
+    <div class="product-filters">
+      <label class="search">
+        <mtb-icon name="search" />
+        <input
+          class="product-search"
+          [value]="productQuery()"
+          (input)="productQuery.set($any($event.target).value)"
+          placeholder="Search products…"
+        />
+      </label>
+      <div class="filter-chips" role="group" aria-label="Availability">
+        <button type="button" class="chip" [class.active]="!inStockOnly()" [attr.aria-pressed]="!inStockOnly()" (click)="inStockOnly.set(false)">
+          All
+        </button>
+        <button type="button" class="chip" [class.active]="inStockOnly()" [attr.aria-pressed]="inStockOnly()" (click)="inStockOnly.set(true)">
+          In stock
+        </button>
+      </div>
+      @if (sizeOptions().length) {
+        <select class="filter-select size-filter" aria-label="Size" [value]="sizeFilter()" (change)="sizeFilter.set($any($event.target).value)">
+          <option value="">Any size</option>
+          @for (size of sizeOptions(); track size) {
+            <option [value]="size">{{ size }}</option>
+          }
+        </select>
+      }
+      <select class="filter-select sort-filter" aria-label="Sort" [value]="sort()" (change)="sort.set($any($event.target).value)">
+        <option value="featured">Featured</option>
+        <option value="price-asc">Price: low to high</option>
+        <option value="price-desc">Price: high to low</option>
+      </select>
+      <span class="count product-count">{{ matchingProducts().length }} {{ matchingProducts().length === 1 ? 'product' : 'products' }}</span>
+    </div>
+  }
+
   <div class="product-grid">
-    @for (product of products(); track product.id; let i = $index) {
+    @for (product of matchingProducts(); track product.id; let i = $index) {
       <article class="product-card">
         <div class="product-media" [class.photo]="product.imageUrl" [attr.data-tone]="i % 4">
           @if (product.imageUrl) {
@@ -89,6 +125,13 @@
           </div>
         </div>
       </article>
+    } @empty {
+      @if (products().length) {
+        <div class="empty-preview product-empty">
+          No products match your filters.
+          <button type="button" class="link-button" (click)="clearFilters()">Clear filters</button>
+        </div>
+      }
     }
   </div>
 

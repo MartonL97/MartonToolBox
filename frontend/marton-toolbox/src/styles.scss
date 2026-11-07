@@ -152,6 +152,14 @@ nav a.active::before {
 nav a.active mtb-icon {
   color: var(--brand);
 }
+/* The shop link leads the sidebar, so it gets the brand color even when inactive. */
+nav a.nav-shop {
+  color: var(--brand-ink);
+  font-weight: 600;
+}
+nav a.nav-shop mtb-icon {
+  color: var(--brand);
+}
 .privacy {
   margin-top: auto;
   display: flex;

@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { CartService, ShopProduct, ShopSize, money } from '../../core/shop/cart.service';
 import { IconComponent } from '../../core/ui/icon.component';
@@ -18,6 +18,29 @@ export class ShopComponent {
   /** Selected size per product id. */
   private sizes = signal<Record<string, ShopSize>>({});
   money = money;
+  productQuery = signal('');
+  inStockOnly = signal(false);
+  sizeFilter = signal('');
+  sort = signal<'featured' | 'price-asc' | 'price-desc'>('featured');
+  /** Every size offered by some product, in the order the catalog lists them. */
+  sizeOptions = computed(() => [...new Set(this.products().flatMap((p) => p.sizes.map((s) => s.size)))]);
+  matchingProducts = computed(() => {
+    const q = this.productQuery().trim().toLowerCase();
+    const size = this.sizeFilter();
+    const inStockOnly = this.inStockOnly();
+    const list = this.products().filter((p) => {
+      if (q && !(p.name + ' ' + p.description).toLowerCase().includes(q)) return false;
+      if (size) {
+        const s = p.sizes.find((x) => x.size === size);
+        if (!s || (inStockOnly && s.stock === 0)) return false;
+      }
+      return !inStockOnly || p.stock > 0;
+    });
+    const sort = this.sort();
+    // "Featured" keeps the catalog order.
+    if (sort === 'featured') return list;
+    return list.sort((a, b) => (sort === 'price-asc' ? a.price - b.price : b.price - a.price));
+  });
   private timer?: ReturnType<typeof setTimeout>;
 
   constructor() {
@@ -26,6 +49,13 @@ export class ShopComponent {
       .then((c) => this.products.set(c.products))
       .catch(() => this.error.set('The shop is unavailable right now. Please try again later.'))
       .finally(() => this.loading.set(false));
+  }
+
+  clearFilters() {
+    this.productQuery.set('');
+    this.inStockOnly.set(false);
+    this.sizeFilter.set('');
+    this.sort.set('featured');
   }
 
   selected(product: ShopProduct): ShopSize | null {

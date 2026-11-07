@@ -1,8 +1,8 @@
 import { TestBed } from '@angular/core/testing';
 import { ShopComponent } from './shop.component';
 import { CartService } from '../../core/shop/cart.service';
-import { CATALOG } from '../../../testing/shop-fixtures';
-import { click, render, settle, text } from '../../../testing/test-helpers';
+import { CATALOG, MUG, TSHIRT } from '../../../testing/shop-fixtures';
+import { click, render, settle, text, type } from '../../../testing/test-helpers';
 
 describe('ShopComponent', () => {
   async function setup() {
@@ -53,5 +53,52 @@ describe('ShopComponent', () => {
     click(card('Mug').querySelector('.product-foot button'));
     fixture.detectChanges();
     expect(text(el.querySelector('.cart-bar'))).toContain('1 item · 49,00 RON');
+  });
+
+  describe('search and filters', () => {
+    const CAP = { ...MUG, id: 'cap', slug: 'cap', name: 'Cap', description: 'Baseball cap', price: 39, stock: 0 };
+    async function setupFilters() {
+      const r = render(ShopComponent);
+      r.http.expectOne('/api/shop/products').flush({ data: { ...CATALOG, products: [TSHIRT, MUG, CAP] } });
+      await settle(r.fixture);
+      const names = () => Array.from(r.el.querySelectorAll('.product-card h3')).map((h) => text(h));
+      return { ...r, names };
+    }
+
+    it('searches products by name and description', async () => {
+      const { el, fixture, names } = await setupFilters();
+      expect(text(el.querySelector('.product-count'))).toBe('3 products');
+      type(el.querySelector('.product-search'), 'baseball');
+      fixture.detectChanges();
+      expect(names()).toEqual(['Cap']);
+      expect(text(el.querySelector('.product-count'))).toBe('1 product');
+    });
+
+    it('filters to in-stock products', async () => {
+      const { el, fixture, names } = await setupFilters();
+      click(Array.from(el.querySelectorAll('.chip')).find((b) => text(b) === 'In stock'));
+      fixture.detectChanges();
+      expect(names()).toEqual(['MartonToolBox T-Shirt', 'Mug']);
+    });
+
+    it('filters by size, sorts by price and can clear filters', async () => {
+      const { el, fixture, component, names } = await setupFilters();
+      component.sort.set('price-asc');
+      fixture.detectChanges();
+      expect(names()).toEqual(['Cap', 'Mug', 'MartonToolBox T-Shirt']);
+
+      component.sizeFilter.set('M');
+      fixture.detectChanges();
+      expect(names()).toEqual(['MartonToolBox T-Shirt']);
+
+      component.sizeFilter.set('L');
+      component.inStockOnly.set(true);
+      fixture.detectChanges();
+      expect(text(el.querySelector('.product-empty'))).toContain('No products match your filters.');
+
+      click(el.querySelector('.product-empty .link-button'));
+      fixture.detectChanges();
+      expect(names()).toEqual(['MartonToolBox T-Shirt', 'Mug', 'Cap']);
+    });
   });
 });

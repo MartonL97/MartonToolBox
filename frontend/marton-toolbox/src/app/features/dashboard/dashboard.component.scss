@@ -7,7 +7,6 @@
   display: flex;
   align-items: center;
   gap: 18px;
-  margin-top: 28px;
   padding: 22px 24px;
   border-radius: var(--radius-lg);
   border: 1px solid #c7d2fe;
@@ -70,5 +69,85 @@
   .products-banner {
     flex-direction: column;
     align-items: flex-start;
+  }
+}
+
+/* ---------- Hero: shop first ---------- */
+.hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 18px;
+  margin-top: 26px;
+}
+
+.hero-cta {
+  margin: 0;
+  padding: 14px 22px;
+  font-size: 15px;
+  border-radius: 14px;
+  background: #fff;
+  color: var(--brand-ink);
+  box-shadow: 0 12px 30px -12px rgba(0, 0, 0, 0.45);
+  --icon-size: 18px;
+
+  &:hover:not(:disabled) {
+    box-shadow: 0 16px 34px -12px rgba(0, 0, 0, 0.55);
+  }
+}
+
+.hero-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #e0e7ff;
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+  --icon-size: 16px;
+
+  mtb-icon {
+    transition: transform 0.2s var(--ease);
+  }
+
+  &:hover {
+    color: #fff;
+  }
+
+  &:hover mtb-icon {
+    transform: translateX(3px);
+  }
+}
+
+/* ---------- Tools come second ---------- */
+.tools-heading {
+  margin-top: 48px;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.tools-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+
+  .search {
+    width: 260px;
+    padding: 9px 12px;
+  }
+}
+
+@media (max-width: 640px) {
+  .tools-controls {
+    width: 100%;
+
+    .search {
+      flex: 1;
+      width: auto;
+    }
+  }
+
+  .hero-cta {
+    flex: 1;
   }
 }

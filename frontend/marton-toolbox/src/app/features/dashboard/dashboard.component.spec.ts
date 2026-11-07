@@ -1,5 +1,6 @@
 import { DashboardComponent } from './dashboard.component';
-import { TEST_USER, flushAll, render, text, type } from '../../../testing/test-helpers';
+import { CATALOG } from '../../../testing/shop-fixtures';
+import { TEST_USER, flushAll, render, settle, text, type } from '../../../testing/test-helpers';
 
 const TOOLS = [
   { slug: 'csv-cleaner', name: 'CSV Cleaner', description: 'Clean CSV files.', category: 'File Tools', icon: 'table', sortOrder: 1 },
@@ -13,6 +14,13 @@ describe('DashboardComponent', () => {
     flushAll(r.http, '/api/account', { data: { isAdmin: false } });
     r.http.expectOne('/api/tools').flush({ data: TOOLS });
     r.fixture.detectChanges();
+    return r;
+  }
+
+  async function withProducts() {
+    const r = setup();
+    r.http.expectOne('/api/shop/products').flush({ data: CATALOG });
+    await settle(r.fixture);
     return r;
   }
 
@@ -36,12 +44,12 @@ describe('DashboardComponent', () => {
 
   it('filters by name and description as you type', () => {
     const { el, fixture } = setup();
-    type(el.querySelector('.search input'), 'split');
+    type(el.querySelector('.tools-controls .search input'), 'split');
     fixture.detectChanges();
     expect(cards(el).map((c) => text(c.querySelector('h3')))).toEqual(['PDF Toolkit']);
     expect(text(el.querySelector('.count'))).toBe('1 tool');
 
-    type(el.querySelector('.search input'), 'zzz');
+    type(el.querySelector('.tools-controls .search input'), 'zzz');
     fixture.detectChanges();
     expect(text(el.querySelector('.empty-preview'))).toBe('No tools match “zzz”.');
   });
@@ -51,12 +59,26 @@ describe('DashboardComponent', () => {
   });
 
   it('uses a neutral label for visitors', () => {
-    expect(text(setup().el.querySelector('.hero .eyebrow'))).toBe('Your everyday toolbox');
+    expect(text(setup().el.querySelector('.hero .eyebrow'))).toBe("Marton's shop & toolbox");
   });
 
-  it('points to the products shop', () => {
+  it('leads the hero with a shop call to action', () => {
     const { el } = setup();
-    expect(text(el.querySelector('.hero .lead'))).toContain('useful products from Marton');
-    expect(el.querySelector('.products-banner')?.getAttribute('href')).toBe('/shop');
+    expect(text(el.querySelector('.hero h1'))).toContain('Useful products');
+    expect(el.querySelector('.hero-cta')?.getAttribute('href')).toBe('/shop');
   });
+
+  it('links to the shop with a banner before the tools, without product cards', async () => {
+    const { el } = await withProducts();
+    const banner = el.querySelector<HTMLAnchorElement>('.products-banner')!;
+    expect(banner.getAttribute('href')).toBe('/shop');
+    expect(banner.compareDocumentPosition(el.querySelector('a.tool-card')!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(el.querySelector('.product-card, .featured-card, .product-filters')).toBeNull();
+  });
+
+  it('shows the free-shipping threshold in the hero', async () => {
+    const { el } = await withProducts();
+    expect(text(el.querySelector('.hero-points'))).toContain('Free shipping over');
+  });
+
 });
