@@ -1,0 +1,168 @@
+<section class="page tool-page">
+  <div class="ai-header">
+    <div>
+      <p class="eyebrow">AI TOOLS</p>
+      <h1>AI Assistant</h1>
+      <p class="lead">Ask questions, draft emails, summarize text, or get help with your files. It runs on our own server, so your chats stay private.</p>
+    </div>
+    @if (messages().length) {
+      <button type="button" class="secondary new-chat" (click)="newChat()">
+        <mtb-icon name="plus" />
+        New chat
+      </button>
+    }
+  </div>
+
+  @if (packNotice(); as n) {
+    <div class="pack-notice" [class.ok]="n.kind === 'ok'" [class.failed]="n.kind === 'failed'" role="status">
+      @if (n.kind === 'ok') {
+        <mtb-icon name="check" />
+      }
+      <span>{{ n.text }}</span>
+      @if (pendingOrder()) {
+        <button type="button" class="link-button" (click)="checkPackAgain()">Check again</button>
+      }
+    </div>
+  }
+
+  @if (usage(); as u) {
+    <div class="ai-usage" [class.warn]="level() === 'warn'" [class.full]="level() === 'full'">
+      <div class="usage-top">
+        <span class="plan-badge">{{ u.quota.planName }} pack</span>
+        <span class="usage-count">
+          <strong>{{ percent() }}%</strong> used
+          <span class="usage-window">in the last 24 hours</span>
+        </span>
+        <button type="button" class="link-button more-packs" (click)="togglePacks()" [attr.aria-expanded]="showPacks()">
+          {{ showPacks() ? 'Hide packs' : 'Get more messages' }}
+        </button>
+      </div>
+      <div
+        class="usage-bar"
+        role="progressbar"
+        aria-label="AI allowance used in the last 24 hours"
+        aria-valuemin="0"
+        aria-valuemax="100"
+        [attr.aria-valuenow]="percent()"
+        [attr.aria-valuetext]="percent() + '% used'"
+      >
+        <span [style.width.%]="percent()"></span>
+      </div>
+      <p class="usage-note">
+        @if (limitReached()) {
+          <strong>Limit reached.</strong> You can chat again in {{ nextFreeIn() }}, or get a bigger pack.
+        } @else {
+          {{ 100 - percent() }}% left. Longer messages and replies use more.
+          @if (level() === 'warn' && u.quota.nextFreeAt) {
+            Some frees up in {{ nextFreeIn() }}.
+          }
+        }
+        @if (planUntil()) {
+          <span class="plan-until">{{ u.quota.planName }} until {{ planUntil() }}.</span>
+        }
+      </p>
+
+      @if (showPacks()) {
+        <div class="packs">
+          @for (p of u.packs; track p.id) {
+            <div class="pack" [class.current]="u.quota.plan === p.id">
+              <div class="pack-head">
+                <h3>{{ p.name }}</h3>
+                @if (u.quota.plan === p.id) {
+                  <span class="pack-current">Current</span>
+                }
+              </div>
+              <p class="pack-limit"><strong>{{ p.timesBasic }}×</strong> the Basic allowance</p>
+              <p class="pack-meta">Every 24 hours, for {{ p.days }} days</p>
+              <button type="button" class="primary pack-buy" [disabled]="!!buying()" (click)="buy(p)">
+                @if (buying() === p.id) {
+                  Opening payment…
+                } @else if (u.quota.plan === p.id) {
+                  Add {{ p.days }} days · {{ money(p.price, p.currency) }}
+                } @else {
+                  Buy · {{ money(p.price, p.currency) }}
+                }
+              </button>
+            </div>
+          }
+          <p class="packs-note">One-time payment through PayU, no subscription. Buying the pack you already have adds its days after the current ones.</p>
+        </div>
+      }
+    </div>
+  }
+
+  @if (status(); as s) {
+    @if (!s.available) {
+      <div class="ai-unavailable" role="status">
+        <strong>The AI model is offline.</strong>
+        <span>{{ s.problem }}</span>
+        <button type="button" class="link-button" (click)="checkStatus()">Check again</button>
+      </div>
+    }
+  }
+
+  <div class="chat">
+    <div class="thread" #thread aria-live="polite">
+      @for (m of messages(); track $index; let last = $last) {
+        <div class="turn" [class.user]="m.role === 'user'" [class.assistant]="m.role === 'assistant'">
+          @if (m.role === 'assistant') {
+            <span class="avatar-ai"><mtb-icon name="sparkles" /></span>
+          }
+          <div class="bubble">
+            @if (m.content) {
+              {{ m.content }}
+            } @else if (last && streaming()) {
+              <span class="typing">
+                <i></i><i></i><i></i>
+                <em>Thinking…</em>
+              </span>
+            }
+          </div>
+        </div>
+      } @empty {
+        <div class="chat-empty">
+          <span class="chat-empty-icon"><mtb-icon name="sparkles" /></span>
+          <h2>How can I help?</h2>
+          <p>Try one of these, or write your own question below.</p>
+          <div class="suggestions">
+            @for (s of suggestions; track s) {
+              <button type="button" class="suggestion" (click)="useSuggestion(s)">{{ s }}</button>
+            }
+          </div>
+        </div>
+      }
+    </div>
+
+    @if (error()) {
+      <p class="error-text chat-error">{{ error() }}</p>
+    }
+
+    <div class="composer">
+      <textarea
+        #input
+        rows="1"
+        [value]="draft()"
+        (input)="draft.set($any($event.target).value)"
+        (keydown)="onKeydown($event)"
+        [attr.maxlength]="maxChars"
+        [placeholder]="limitReached() ? 'Daily AI limit reached. Get more messages above.' : 'Message the AI assistant…'"
+        aria-label="Message"
+      ></textarea>
+      @if (streaming()) {
+        <button type="button" class="secondary send" (click)="stop()" title="Stop">Stop</button>
+      } @else {
+        <button type="button" class="primary send" [disabled]="!draft().trim() || limitReached()" (click)="send()" title="Send (Enter)">
+          <mtb-icon name="arrow" />
+          Send
+        </button>
+      }
+    </div>
+    <p class="hint">
+      Enter to send · Shift+Enter for a new line
+      @if (status()?.model) {
+        · Model: {{ status()?.model }}
+      }
+      · AI answers can be wrong, so check important facts.
+    </p>
+  </div>
+</section>

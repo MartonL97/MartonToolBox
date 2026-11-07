@@ -36,6 +36,11 @@ fi
 [[ -e /Applications/LibreOffice.app ]] || command -v soffice >/dev/null || \
   yellow "! LibreOffice not found — the Document Converter won't work (brew install --cask libreoffice)."
 
+# The AI Assistant talks to the LLM container (backend setting Llm:BaseUrl, default localhost:8081).
+if ! curl -s -m 2 -o /dev/null http://localhost:8081/health; then
+  yellow "! The AI model isn't running — the AI Assistant won't work (docker compose up -d llm)."
+fi
+
 if [[ ! -d "$FRONTEND/node_modules" ]]; then
   yellow "• Installing frontend packages (first run only)…"
   (cd "$FRONTEND" && npm install --no-audit --no-fund)

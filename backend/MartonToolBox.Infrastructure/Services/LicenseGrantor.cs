@@ -8,6 +8,8 @@ public static class LicenseGrantor
 {
     public static async Task<bool> GrantIfNeededAsync(AppDbContext db, ILicenseService licenses, Order order, CancellationToken ct)
     {
+        // Shop and AI pack orders are paid through the same providers but never unlock the tools.
+        if (order.Kind != OrderKinds.License) return false;
         if (await licenses.HasAccessAsync(order.UserId, ct)) return false;
         db.Licenses.Add(new License
         {

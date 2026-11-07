@@ -119,6 +119,104 @@
   }
 }
 
+/* ---------- Hero image: the AI Assistant in front ---------- */
+.hero-ai {
+  position: absolute;
+  z-index: 2;
+  left: 50%;
+  top: 50%;
+  width: min(300px, 92%);
+  translate: -50% -50%;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px;
+  border-radius: 20px;
+  color: #fff;
+  text-decoration: none;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  backdrop-filter: blur(14px);
+  box-shadow:
+    0 30px 50px -24px rgba(0, 0, 0, 0.6),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  transition:
+    transform 0.2s var(--ease),
+    background 0.2s;
+
+  &:hover {
+    transform: translateY(-3px);
+    background: rgba(255, 255, 255, 0.17);
+  }
+
+  &:hover .hero-ai-try mtb-icon {
+    transform: translateX(3px);
+  }
+}
+
+.hero-ai-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
+  strong {
+    display: block;
+    font-size: 15px;
+  }
+
+  small {
+    color: rgba(224, 231, 255, 0.8);
+    font-size: 12px;
+  }
+}
+
+.hero-ai-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(135deg, #ec4899, #8b5cf6);
+  --icon-size: 18px;
+}
+
+.hero-ai-bubble {
+  max-width: 88%;
+  padding: 8px 11px;
+  border-radius: 14px;
+  font-size: 12.5px;
+  line-height: 1.45;
+
+  &.user {
+    align-self: flex-end;
+    background: #fff;
+    color: var(--brand-ink);
+    border-top-right-radius: 5px;
+  }
+
+  &.ai {
+    align-self: flex-start;
+    background: rgba(15, 23, 42, 0.35);
+    color: #e0e7ff;
+    border-top-left-radius: 5px;
+  }
+}
+
+.hero-ai-try {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 2px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #fff;
+  --icon-size: 15px;
+
+  mtb-icon {
+    transition: transform 0.2s var(--ease);
+  }
+}
+
 /* ---------- Tools come second ---------- */
 .tools-heading {
   margin-top: 48px;
@@ -149,5 +247,23 @@
 
   .hero-cta {
     flex: 1;
+  }
+}
+
+/* The global styles hide the hero image on narrow screens; keep the AI Assistant card, without the tiles. */
+@media (max-width: 960px) {
+  .hero-art {
+    display: block;
+    height: auto;
+  }
+
+  .float-tile {
+    display: none;
+  }
+
+  .hero-ai {
+    position: static;
+    translate: none;
+    width: 100%;
   }
 }

@@ -14,6 +14,8 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : Ident
     public DbSet<ShopProduct> ShopProducts => Set<ShopProduct>();
     public DbSet<OrderItem> OrderItems => Set<OrderItem>();
     public DbSet<ShopProductVariant> ShopProductVariants => Set<ShopProductVariant>();
+    public DbSet<AiUsage> AiUsages => Set<AiUsage>();
+    public DbSet<AiPackGrant> AiPackGrants => Set<AiPackGrant>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -58,6 +60,14 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : Ident
         {
             b.HasIndex(x => new { x.ProductId, x.Size }).IsUnique();
             b.Property(x => x.Size).HasMaxLength(20);
+        });
+        builder.Entity<AiUsage>(b => b.HasIndex(x => new { x.UserId, x.CreatedAt }));
+        builder.Entity<AiPackGrant>(b =>
+        {
+            b.HasIndex(x => x.OrderId).IsUnique();
+            b.HasIndex(x => new { x.UserId, x.ExpiresAt });
+            b.Property(x => x.Pack).HasMaxLength(40);
+            b.Property(x => x.PackName).HasMaxLength(80);
         });
     }
 }

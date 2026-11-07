@@ -68,6 +68,14 @@ describe('DashboardComponent', () => {
     expect(el.querySelector('.hero-cta')?.getAttribute('href')).toBe('/shop');
   });
 
+  it('features the AI Assistant in the hero image', () => {
+    const { el } = setup();
+    const card = el.querySelector('.hero-art .hero-ai') as HTMLAnchorElement;
+    expect(card.getAttribute('href')).toBe('/tools/ai-assistant');
+    expect(text(card.querySelector('.hero-ai-head strong'))).toBe('AI Assistant');
+    expect(text(card.querySelector('.hero-ai-try'))).toBe('Try the AI Assistant');
+  });
+
   it('links to the shop with a banner before the tools, without product cards', async () => {
     const { el } = await withProducts();
     const banner = el.querySelector<HTMLAnchorElement>('.products-banner')!;

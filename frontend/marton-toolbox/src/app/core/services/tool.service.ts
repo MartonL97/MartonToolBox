@@ -4,6 +4,14 @@ import { catchError, map, of } from 'rxjs';
 import { Tool } from '../models/tool.model';
 const fallback: Tool[] = [
   {
+    slug: 'ai-assistant',
+    name: 'AI Assistant',
+    description: 'Chat with a private AI model hosted on our own server.',
+    category: 'AI Tools',
+    icon: 'sparkles',
+    sortOrder: 0,
+  },
+  {
     slug: 'csv-cleaner',
     name: 'CSV Cleaner',
     description: 'Clean, deduplicate, and organize CSV files.',

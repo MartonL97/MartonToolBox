@@ -98,6 +98,14 @@ public sealed class PayUPaymentService(HttpClient http, AppDbContext db, ILicens
         return new CheckoutSession(order.Id, redirect, order.Amount, order.Currency);
     }
 
+    /// <summary>Starts payment for an AI pack order the caller has already saved. PayU returns the buyer to the AI Assistant.</summary>
+    public async Task<CheckoutSession> StartAiPackCheckoutAsync(Order order, string description, CancellationToken ct = default)
+    {
+        var frontendBaseUrl = (configuration["Frontend:BaseUrl"] ?? "http://localhost:4200").TrimEnd('/');
+        var redirect = await RegisterWithPayUAsync(order, [(description, order.Amount, 1)], description, $"{frontendBaseUrl}/tools/ai-assistant?aiOrder={order.Id}", ct);
+        return new CheckoutSession(order.Id, redirect, order.Amount, order.Currency);
+    }
+
     private async Task<string> RegisterWithPayUAsync(Order order, IReadOnlyList<(string Name, decimal UnitPrice, int Quantity)> lines, string description, string continueUrl, CancellationToken ct)
     {
         var backendBaseUrl = (configuration["Backend:BaseUrl"] ?? "http://localhost:8080").TrimEnd('/');
@@ -181,6 +189,10 @@ public sealed class PayUPaymentService(HttpClient http, AppDbContext db, ILicens
                 if (item.VariantId is { } vid && variants.TryGetValue(vid, out var variant)) variant.Stock = Math.Max(0, variant.Stock - item.Quantity);
                 else if (products.TryGetValue(item.ProductId, out var product)) product.Stock = Math.Max(0, product.Stock - item.Quantity);
             }
+        }
+        else if (state == OrderState.Completed && order.Kind == OrderKinds.AiPack)
+        {
+            await AiQuotaService.ActivatePackAsync(db, order, DateTimeOffset.UtcNow, ct);
         }
         else if (state == OrderState.Completed)
         {

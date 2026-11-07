@@ -41,12 +41,27 @@
         </span>
       </div>
     </div>
-    <div class="hero-art" aria-hidden="true">
-      <span class="float-tile t1"><mtb-icon name="bag" /></span>
-      <span class="float-tile t2"><mtb-icon name="sparkles" /></span>
-      <span class="float-tile t3"><mtb-icon name="package" /></span>
-      <span class="float-tile t4"><mtb-icon name="cart" /></span>
-      <span class="float-tile t5"><mtb-icon name="file" /></span>
+    <div class="hero-art">
+      <span class="float-tile t2" aria-hidden="true"><mtb-icon name="bag" /></span>
+      <span class="float-tile t3" aria-hidden="true"><mtb-icon name="package" /></span>
+      <span class="float-tile t4" aria-hidden="true"><mtb-icon name="cart" /></span>
+      <span class="float-tile t5" aria-hidden="true"><mtb-icon name="file" /></span>
+      <!-- The AI Assistant is the centrepiece: a small chat preview that opens the tool. -->
+      <a class="hero-ai" routerLink="/tools/ai-assistant" aria-label="Open the AI Assistant">
+        <span class="hero-ai-head">
+          <span class="hero-ai-icon"><mtb-icon name="sparkles" /></span>
+          <span>
+            <strong>AI Assistant</strong>
+            <small>Private · runs on our server</small>
+          </span>
+        </span>
+        <span class="hero-ai-bubble user" aria-hidden="true">Write a short description for my T-shirt</span>
+        <span class="hero-ai-bubble ai" aria-hidden="true">Soft cotton, a clean fit and a logo that starts conversations…</span>
+        <span class="hero-ai-try">
+          Try the AI Assistant
+          <mtb-icon name="arrow" />
+        </span>
+      </a>
     </div>
   </div>
 

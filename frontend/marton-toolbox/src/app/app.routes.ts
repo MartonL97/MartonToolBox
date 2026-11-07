@@ -58,6 +58,11 @@ export const routes: Routes = [
     canActivate: [authGuard, licenseGuard],
     loadComponent: () => import('./features/document-converter/document-converter.component').then((m) => m.DocumentConverterComponent),
   },
+  {
+    path: 'tools/ai-assistant',
+    canActivate: [authGuard, licenseGuard],
+    loadComponent: () => import('./features/ai-assistant/ai-assistant.component').then((m) => m.AiAssistantComponent),
+  },
   { path: 'shop', loadComponent: () => import('./features/shop/shop.component').then((m) => m.ShopComponent) },
   { path: 'shop/cart', loadComponent: () => import('./features/shop/cart.component').then((m) => m.CartComponent) },
   {

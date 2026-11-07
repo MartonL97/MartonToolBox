@@ -10,7 +10,7 @@ public sealed class Order
     public string Status { get; set; } = "Pending";
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
 
-    /// <summary>"License" (unlocks the tools) or "Shop" (physical goods). Only license orders grant a license.</summary>
+    /// <summary>"License" (unlocks the tools), "Shop" (physical goods) or "AiPack" (more AI messages per day). Only license orders grant a license.</summary>
     public string Kind { get; set; } = OrderKinds.License;
 
     // Shop orders only.
@@ -28,6 +28,7 @@ public static class OrderKinds
 {
     public const string License = "License";
     public const string Shop = "Shop";
+    public const string AiPack = "AiPack";
 }
 
 /// <summary>

@@ -1,0 +1,16 @@
+# Runs the LLM on NVIDIA GPU(s). Needs the NVIDIA driver on the host; Docker Desktop (Windows 10/11 with WSL2)
+# has GPU support built in, Docker Engine on Linux needs the NVIDIA Container Toolkit. Use with the main file:
+#   docker compose -f docker-compose.yml -f docker-compose.gpu.yml up -d
+services:
+  llm:
+    image: ghcr.io/ggml-org/llama.cpp:server-cuda
+    environment:
+      LLAMA_ARG_N_GPU_LAYERS: "999" # put the whole model on the GPU
+      LLAMA_ARG_FLASH_ATTN: "on"
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]

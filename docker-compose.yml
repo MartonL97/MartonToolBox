@@ -1,4 +1,26 @@
 services:
+  # Local LLM for the AI Assistant: llama.cpp's llama-server with an OpenAI-compatible API.
+  # The first start downloads the model from Hugging Face into the llm-models volume (kept across restarts).
+  # On a machine with an NVIDIA GPU, add the GPU file:
+  #   docker compose -f docker-compose.yml -f docker-compose.gpu.yml up -d
+  llm:
+    image: ghcr.io/ggml-org/llama.cpp:server
+    environment:
+      LLAMA_ARG_HF_REPO: ${LLM_HF_MODEL:-Qwen/Qwen3-4B-GGUF:Q4_K_M}   # any GGUF model on Hugging Face, as repo:quantization
+      LLAMA_ARG_ALIAS: ${LLM_MODEL:-qwen3-4b}                         # the name the API reports; must match the backend's Llm__Model
+      LLAMA_ARG_CTX_SIZE: ${LLM_CONTEXT:-8192}                        # shared by all parallel slots
+      LLAMA_ARG_N_PARALLEL: ${LLM_PARALLEL:-1}                        # chats answered at the same time
+      LLAMA_ARG_JINJA: "true"
+      LLAMA_ARG_HOST: 0.0.0.0
+      LLAMA_ARG_PORT: "8080"
+      LLAMA_CACHE: /models
+      LLM_API_KEY: ${LLM_API_KEY:-}
+    # Requires the key only when LLM_API_KEY is set (an empty key would lock everyone out).
+    entrypoint: ["/bin/sh", "-c", "if [ -n \"$$LLM_API_KEY\" ]; then export LLAMA_API_KEY=\"$$LLM_API_KEY\"; fi; exec /app/llama-server"]
+    volumes: [llm-models:/models]
+    # Localhost only. The backend in Docker reaches it as http://llm:8080, a backend started with ./start.sh as http://localhost:8081.
+    ports: ["127.0.0.1:8081:8080"]
+    restart: unless-stopped
   postgres:
     image: postgres:16-alpine
     environment:
@@ -35,7 +57,10 @@ services:
       Smtp__FromEmail: ${SMTP_FROM_EMAIL:-}
       Frontend__BaseUrl: ${FRONTEND_BASE_URL:-http://localhost:4200}
       Backend__BaseUrl: ${BACKEND_BASE_URL:-http://localhost:8080}
-    depends_on: [postgres]
+      Llm__BaseUrl: ${LLM_BASE_URL:-http://llm:8080}
+      Llm__Model: ${LLM_MODEL:-qwen3-4b}
+      Llm__ApiKey: ${LLM_API_KEY:-}
+    depends_on: [postgres, llm]
     ports: ["8080:8080"]
   frontend:
     build: ./frontend/marton-toolbox
@@ -43,3 +68,4 @@ services:
     ports: ["4200:80"]
 volumes:
   postgres-data:
+  llm-models:

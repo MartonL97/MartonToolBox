@@ -55,8 +55,11 @@ static async Task SeedToolsAsync(IServiceProvider services)
         new Tool { Slug = "csv-cleaner", Name = "CSV Cleaner", Description = "Clean, deduplicate, and organize CSV files.", Category = "File Tools", Icon = "table", SortOrder = 1 },
         new Tool { Slug = "image-resizer", Name = "Image Resizer", Description = "Resize images for every social platform.", Category = "Image Tools", Icon = "image", SortOrder = 3 },
         new Tool { Slug = "pdf-toolkit", Name = "PDF Toolkit", Description = "Merge, split, reorder, and rotate PDFs privately.", Category = "File Tools", Icon = "file", SortOrder = 4 },
+        new Tool { Slug = "ai-assistant", Name = "AI Assistant", Description = "Chat with a private AI model hosted on our own server.", Category = "AI Tools", Icon = "sparkles", SortOrder = 0 },
         new Tool { Slug = "document-converter", Name = "Document Converter", Description = "Convert PDF to Word, and Word, Excel, or PowerPoint to PDF.", Category = "File Tools", Icon = "convert", SortOrder = 5 }
     }.Where(t => !existing.Contains(t.Slug))); await db.SaveChangesAsync();
+    // The AI Assistant leads the toolbox, also in databases seeded when it came last.
+    await db.Tools.Where(t => t.Slug == "ai-assistant" && t.SortOrder == 6).ExecuteUpdateAsync(s => s.SetProperty(t => t.SortOrder, 0));
     // Retired tools: drop them from databases seeded before they were removed.
     await db.Tools.Where(t => t.Slug == "screenshot-beautifier").ExecuteDeleteAsync();
 

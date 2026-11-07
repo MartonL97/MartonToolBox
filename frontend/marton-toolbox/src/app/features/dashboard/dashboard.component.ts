@@ -13,6 +13,7 @@ const TONES: Record<string, string> = {
   'image-resizer': 'violet',
   'pdf-toolkit': 'amber',
   'document-converter': 'teal',
+  'ai-assistant': 'pink',
 };
 
 @Component({
