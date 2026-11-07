@@ -1,6 +1,7 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
+import type { I18nService } from '../i18n/i18n.service';
 
 export interface AuthUser {
   id: string;
@@ -14,12 +15,20 @@ interface AuthResult {
   user: AuthUser;
 }
 
-export function extractAuthError(err: any): string {
+/** The API's error as one readable sentence; with i18n, in the user's language (Identity errors by their code). */
+export function extractAuthError(err: any, i18n?: I18nService): string {
   const body = err?.error;
-  if (!body) return 'Something went wrong. Please try again.';
-  if (typeof body.error === 'string') return body.error;
+  if (!body) return i18n ? i18n.t('common.network_error') : 'Something went wrong. Please try again.';
+  if (typeof body.error === 'string') return i18n ? i18n.server(body.error) : body.error;
   if (Array.isArray(body.errors))
-    return body.errors.map((e: any) => e.description ?? e).join(' ') || 'Please check your details and try again.';
+    return (
+      body.errors
+        // English keeps the server's own wording; other languages use ours for the codes we know.
+        .map((e: any) =>
+          i18n && i18n.lang() !== 'en' && e?.code ? i18n.tOr(`identity.${e.code}`, e.description ?? e.code) : (e.description ?? e),
+        )
+        .join(' ') || 'Please check your details and try again.'
+    );
   if (body.errors && typeof body.errors === 'object')
     return Object.values(body.errors).flat().join(' ') || 'Please check your details and try again.';
   if (typeof body.title === 'string') return body.title;

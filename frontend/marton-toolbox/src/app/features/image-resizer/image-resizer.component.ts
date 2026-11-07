@@ -1,4 +1,5 @@
 import { Component, signal } from '@angular/core';
+import { I18N } from '../../core/i18n/translate.pipe';
 import JSZip from 'jszip';
 const presets = {
   'Instagram Square': [1080, 1080],
@@ -8,7 +9,12 @@ const presets = {
   'Facebook Post': [1200, 630],
   'YouTube Thumbnail': [1280, 720],
 };
-@Component({ standalone: true, templateUrl: './image-resizer.component.html', styleUrl: './image-resizer.component.scss' })
+@Component({
+  standalone: true,
+  imports: [...I18N],
+  templateUrl: './image-resizer.component.html',
+  styleUrl: './image-resizer.component.scss',
+})
 export class ImageResizerComponent {
   files = signal<{ file: File; url: string; width: number; height: number }[]>([]);
   width = signal(1080);

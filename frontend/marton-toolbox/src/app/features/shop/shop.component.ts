@@ -2,15 +2,18 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { CartService, ShopProduct, ShopSize, money } from '../../core/shop/cart.service';
 import { IconComponent } from '../../core/ui/icon.component';
+import { I18nService } from '../../core/i18n/i18n.service';
+import { I18N } from '../../core/i18n/translate.pipe';
 
 @Component({
   standalone: true,
-  imports: [RouterLink, IconComponent],
+  imports: [RouterLink, IconComponent, ...I18N],
   templateUrl: './shop.component.html',
   styleUrl: './shop.component.scss',
 })
 export class ShopComponent {
   cart = inject(CartService);
+  private i18n = inject(I18nService);
   products = signal<ShopProduct[]>([]);
   loading = signal(true);
   error = signal('');
@@ -47,7 +50,7 @@ export class ShopComponent {
     this.cart
       .loadCatalog()
       .then((c) => this.products.set(c.products))
-      .catch(() => this.error.set('The shop is unavailable right now. Please try again later.'))
+      .catch(() => this.error.set(this.i18n.t('shop.unavailable')))
       .finally(() => this.loading.set(false));
   }
 

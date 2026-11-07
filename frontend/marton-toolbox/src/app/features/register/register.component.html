@@ -3,39 +3,39 @@
     @if (sentTo()) {
       <div class="auth-done">
         <span class="auth-done-icon"><mtb-icon name="check" /></span>
-        <h1>Check your inbox</h1>
+        <h1>{{ 'auth.check_inbox' | t }}</h1>
         <p class="lead">
-          We sent a confirmation link to
+          {{ 'register.sent_to' | t }}
           <strong>{{ sentTo() }}</strong>
-          . Click it to activate your account — then you're in.
+          {{ 'register.sent_after' | t }}
         </p>
         @if (!emailSent()) {
-          <p class="error-text">We couldn't send the email just now. Use the button below to try again.</p>
+          <p class="error-text">{{ 'register.send_failed' | t }}</p>
         }
-        <p class="hint">Didn't get it? Check your spam folder, or send it again.</p>
+        <p class="hint">{{ 'register.spam' | t }}</p>
         <button class="secondary block" (click)="resend()" [disabled]="resending() || resent()">
-          {{ resent() ? 'Sent — check your inbox' : resending() ? 'Sending…' : 'Resend confirmation email' }}
+          {{ resent() ? ('auth.sent' | t) : resending() ? ('auth.sending' | t) : ('auth.resend' | t) }}
         </button>
         <p class="auth-switch">
-          Already confirmed?
-          <a routerLink="/login">Log in</a>
+          {{ 'register.already_confirmed' | t }}
+          <a routerLink="/login">{{ 'auth.log_in' | t }}</a>
         </p>
       </div>
     } @else {
-      <p class="eyebrow">GET STARTED</p>
-      <h1>Create your account</h1>
-      <p class="lead">Free to join. Your files never leave your browser.</p>
+      <p class="eyebrow">{{ 'register.eyebrow' | t }}</p>
+      <h1>{{ 'register.title' | t }}</h1>
+      <p class="lead">{{ 'register.lead' | t }}</p>
       <form (submit)="submit($event)">
         <label>
-          Name
+          {{ 'auth.name' | t }}
           <input type="text" autocomplete="name" [value]="displayName()" (input)="displayName.set($any($event.target).value)" required />
         </label>
         <label>
-          Email
+          {{ 'auth.email' | t }}
           <input type="email" autocomplete="email" [value]="email()" (input)="email.set($any($event.target).value)" required />
         </label>
         <label>
-          Password
+          {{ 'auth.password' | t }}
           <input
             type="password"
             autocomplete="new-password"
@@ -45,9 +45,9 @@
             required
           />
         </label>
-        <small>At least 8 characters, with an uppercase and a lowercase letter, a number and a symbol (e.g. !).</small>
+        <small>{{ 'auth.password_rules' | t }}</small>
         <label>
-          Confirm password
+          {{ 'register.confirm' | t }}
           <input
             type="password"
             autocomplete="new-password"
@@ -58,18 +58,18 @@
           />
         </label>
         @if (mismatch()) {
-          <small class="field-error">The passwords don't match.</small>
+          <small class="field-error">{{ 'auth.mismatch' | t }}</small>
         }
         @if (error()) {
           <p class="error-text">{{ error() }}</p>
         }
         <button class="primary" type="submit" [disabled]="loading() || mismatch()">
-          {{ loading() ? 'Creating account…' : 'Create account' }}
+          {{ loading() ? ('register.creating' | t) : ('register.create' | t) }}
         </button>
       </form>
       <p class="auth-switch">
-        Already have an account?
-        <a routerLink="/login" queryParamsHandling="preserve">Log in</a>
+        {{ 'register.have_account' | t }}
+        <a routerLink="/login" queryParamsHandling="preserve">{{ 'auth.log_in' | t }}</a>
       </p>
     }
   </div>

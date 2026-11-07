@@ -5,13 +5,15 @@ import { firstValueFrom } from 'rxjs';
 import { AuthService } from '../../core/auth/auth.service';
 import { CartService, lineKey, money } from '../../core/shop/cart.service';
 import { IconComponent } from '../../core/ui/icon.component';
+import { I18nService } from '../../core/i18n/i18n.service';
+import { I18N } from '../../core/i18n/translate.pipe';
 
 type ShippingField = 'name' | 'phone' | 'address' | 'city' | 'county' | 'postalCode';
 const SHIPPING_KEY = 'mtb_shipping';
 
 @Component({
   standalone: true,
-  imports: [RouterLink, IconComponent],
+  imports: [RouterLink, IconComponent, ...I18N],
   templateUrl: './cart.component.html',
   styleUrl: './cart.component.scss',
 })
@@ -19,6 +21,7 @@ export class CartComponent {
   private http = inject(HttpClient);
   auth = inject(AuthService);
   cart = inject(CartService);
+  private i18n = inject(I18nService);
   money = money;
   busy = signal(false);
   error = signal('');
@@ -42,7 +45,7 @@ export class CartComponent {
   });
 
   constructor() {
-    this.cart.loadCatalog().catch(() => this.error.set('Could not refresh prices. Please reload the page.'));
+    this.cart.loadCatalog().catch(() => this.error.set(this.i18n.t('cart.refresh_failed')));
     this.prefillFromProfile();
   }
 
@@ -105,7 +108,7 @@ export class CartComponent {
     } catch (err) {
       const e = err as HttpErrorResponse;
       this.error.set(
-        e.error?.error ?? (e.status === 400 ? 'Please check the shipping details.' : 'Could not start checkout. Please try again.'),
+        e.error?.error ? this.i18n.server(e.error.error) : this.i18n.t(e.status === 400 ? 'cart.check_details' : 'cart.checkout_failed'),
       );
       this.busy.set(false);
       this.cart.loadCatalog().catch(() => {});

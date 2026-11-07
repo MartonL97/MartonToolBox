@@ -1,6 +1,8 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
+import { I18nService } from '../../core/i18n/i18n.service';
+import { I18N } from '../../core/i18n/translate.pipe';
 
 const MAX_BYTES = 25_000_000;
 const TARGETS: Record<string, { target: string; label: string } | undefined> = {
@@ -15,11 +17,13 @@ const ACCEPT = Object.keys(TARGETS)
 
 @Component({
   standalone: true,
+  imports: [...I18N],
   styleUrl: './document-converter.component.scss',
   templateUrl: './document-converter.component.html',
 })
 export class DocumentConverterComponent {
   private http = inject(HttpClient);
+  private i18n = inject(I18nService);
   accept = ACCEPT;
   file = signal<File | null>(null);
   busy = signal(false);
@@ -36,11 +40,11 @@ export class DocumentConverterComponent {
     this.doneName.set('');
     if (!file) return;
     if (file.size > MAX_BYTES) {
-      this.error.set('That file is larger than 25 MB.');
+      this.error.set(this.i18n.t('doc.too_big'));
       return;
     }
     this.file.set(file);
-    if (!this.conversion()) this.error.set("This file type isn't supported.");
+    if (!this.conversion()) this.error.set(this.i18n.t('doc.unsupported'));
   }
 
   async convert() {
@@ -63,7 +67,7 @@ export class DocumentConverterComponent {
       setTimeout(() => URL.revokeObjectURL(a.href), 1000);
       this.doneName.set(name);
     } catch (err) {
-      this.error.set(await errorMessage(err));
+      this.error.set(await errorMessage(err, this.i18n));
     } finally {
       this.busy.set(false);
     }
@@ -71,16 +75,16 @@ export class DocumentConverterComponent {
 }
 
 /** With responseType 'blob', error bodies arrive as a Blob holding the JSON { error }. */
-async function errorMessage(err: unknown): Promise<string> {
+async function errorMessage(err: unknown, i18n: I18nService): Promise<string> {
   if (err instanceof HttpErrorResponse) {
-    if (err.status === 402) return 'An active license is required to use this tool.';
-    if (err.status === 413) return 'That file is too large.';
+    if (err.status === 402) return i18n.t('common.license_required');
+    if (err.status === 413) return i18n.t('doc.too_large');
     try {
       const body = err.error instanceof Blob ? JSON.parse(await err.error.text()) : err.error;
-      if (body?.error) return body.error;
+      if (body?.error) return i18n.server(body.error);
     } catch {
       /* fall through */
     }
   }
-  return 'The conversion failed. Please try again.';
+  return i18n.t('doc.failed');
 }

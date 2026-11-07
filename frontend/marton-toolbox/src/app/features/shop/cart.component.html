@@ -1,19 +1,19 @@
 <section class="page">
-  <p class="eyebrow">Shop</p>
-  <h1>Your cart</h1>
+  <p class="eyebrow">{{ 'cart.eyebrow' | t }}</p>
+  <h1>{{ 'cart.title' | t }}</h1>
 
   @if (!cart.lines().length) {
     <div class="empty-state">
       <span class="tool-icon"><mtb-icon name="cart" /></span>
-      <h3>Your cart is empty</h3>
-      <p class="lead">Browse the shop and add something you like.</p>
-      <a class="primary" routerLink="/shop">Go to shop</a>
+      <h3>{{ 'cart.empty' | t }}</h3>
+      <p class="lead">{{ 'cart.empty_text' | t }}</p>
+      <a class="primary" routerLink="/shop">{{ 'cart.go_shop' | t }}</a>
     </div>
   } @else {
     <div class="checkout">
       <div class="checkout-main">
         <div class="panel">
-          <h3>Items</h3>
+          <h3>{{ 'cart.items' | t }}</h3>
           @for (line of cart.lines(); track key(line)) {
             <div class="cart-line">
               <div class="cart-thumb" [class.photo]="line.imageUrl">
@@ -27,16 +27,18 @@
                 <strong>{{ line.name }}</strong>
                 <span>
                   @if (line.size) {
-                    Size {{ line.size }} ·
+                    {{ 'cart.size_n' | t: { size: line.size } }}
                   }
-                  {{ money(line.price) }} each
+                  {{ 'cart.each' | t: { price: money(line.price) } }}
                 </span>
               </div>
               <div class="stepper">
-                <button title="Decrease" (click)="cart.setQuantity(key(line), line.quantity - 1)"><mtb-icon name="minus" /></button>
+                <button [title]="'cart.decrease' | t" (click)="cart.setQuantity(key(line), line.quantity - 1)">
+                  <mtb-icon name="minus" />
+                </button>
                 <span>{{ line.quantity }}</span>
                 <button
-                  title="Increase"
+                  [title]="'cart.increase' | t"
                   [disabled]="line.quantity >= cart.stockOf(line)"
                   (click)="cart.setQuantity(key(line), line.quantity + 1)"
                 >
@@ -44,7 +46,7 @@
                 </button>
               </div>
               <strong class="line-total">{{ money(line.price * line.quantity) }}</strong>
-              <button class="icon-button" title="Remove" (click)="cart.remove(key(line))"><mtb-icon name="trash" /></button>
+              <button class="icon-button" [title]="'cart.remove' | t" (click)="cart.remove(key(line))"><mtb-icon name="trash" /></button>
             </div>
           }
         </div>
@@ -52,15 +54,15 @@
         <form class="panel" (submit)="checkout($event)">
           <h3>
             <mtb-icon name="truck" />
-            Shipping address
+            {{ 'cart.shipping_address' | t }}
           </h3>
           <div class="form-grid">
             <label class="span-2">
-              Full name
+              {{ 'cart.full_name' | t }}
               <input autocomplete="name" [value]="shipping().name" (input)="set('name', $event)" required />
             </label>
             <label>
-              Phone
+              {{ 'cart.phone' | t }}
               <input
                 type="tel"
                 autocomplete="tel"
@@ -71,25 +73,25 @@
               />
             </label>
             <label>
-              Postal code
+              {{ 'cart.postal_code' | t }}
               <input autocomplete="postal-code" [value]="shipping().postalCode" (input)="set('postalCode', $event)" required />
             </label>
             <label class="span-2">
-              Street address
+              {{ 'cart.street' | t }}
               <input
                 autocomplete="street-address"
-                placeholder="Street, number, building, apartment"
+                [placeholder]="'cart.street_hint' | t"
                 [value]="shipping().address"
                 (input)="set('address', $event)"
                 required
               />
             </label>
             <label>
-              City
+              {{ 'cart.city' | t }}
               <input autocomplete="address-level2" [value]="shipping().city" (input)="set('city', $event)" required />
             </label>
             <label>
-              County (județ)
+              {{ 'cart.county' | t }}
               <input autocomplete="address-level1" [value]="shipping().county" (input)="set('county', $event)" required />
             </label>
           </div>
@@ -98,20 +100,20 @@
       </div>
 
       <div class="summary panel">
-        <h3>Order summary</h3>
+        <h3>{{ 'cart.summary' | t }}</h3>
         <div class="summary-row">
-          <span>Subtotal</span>
+          <span>{{ 'common.subtotal' | t }}</span>
           <span>{{ money(cart.subtotal()) }}</span>
         </div>
         <div class="summary-row">
-          <span>Shipping</span>
-          <span>{{ shippingCost() === 0 ? 'Free' : money(shippingCost()) }}</span>
+          <span>{{ 'common.shipping' | t }}</span>
+          <span>{{ shippingCost() === 0 ? ('common.free' | t) : money(shippingCost()) }}</span>
         </div>
         @if (freeShippingGap() > 0) {
-          <p class="hint-box">Add {{ money(freeShippingGap()) }} more for free shipping.</p>
+          <p class="hint-box">{{ 'cart.add_more' | t: { amount: money(freeShippingGap()) } }}</p>
         }
         <div class="summary-row total">
-          <span>Total</span>
+          <span>{{ 'common.total' | t }}</span>
           <span>{{ money(total()) }}</span>
         </div>
         @if (error()) {
@@ -119,17 +121,17 @@
         }
         @if (auth.isAuthenticated()) {
           <button class="primary block" [disabled]="busy() || !formValid()" (click)="checkout()">
-            {{ busy() ? 'Redirecting to PayU…' : 'Pay ' + money(total()) + ' with PayU' }}
+            {{ busy() ? ('cart.redirecting' | t) : ('cart.pay' | t: { amount: money(total()) }) }}
           </button>
           @if (!formValid()) {
-            <p class="hint">Fill in the shipping address to continue.</p>
+            <p class="hint">{{ 'cart.fill_address' | t }}</p>
           }
         } @else {
-          <a class="primary block" routerLink="/login" [queryParams]="{ returnUrl: '/shop/cart' }">Log in to check out</a>
+          <a class="primary block" routerLink="/login" [queryParams]="{ returnUrl: '/shop/cart' }">{{ 'cart.login_to_checkout' | t }}</a>
         }
         <p class="hint secure">
           <mtb-icon name="shield" />
-          Secure card payment by PayU.
+          {{ 'cart.secure' | t }}
         </p>
       </div>
     </div>

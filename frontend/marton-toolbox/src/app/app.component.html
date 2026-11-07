@@ -7,16 +7,16 @@
     <nav>
       <a routerLink="/dashboard" routerLinkActive="active">
         <mtb-icon name="dashboard" />
-        Dashboard
+        {{ 'nav.dashboard' | t }}
       </a>
-      <p>Products</p>
+      <p>{{ 'nav.products' | t }}</p>
       <a class="nav-shop" routerLink="/shop" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
         <mtb-icon name="bag" />
-        Shop
+        {{ 'nav.shop' | t }}
       </a>
       <a routerLink="/shop/cart" routerLinkActive="active">
         <mtb-icon name="cart" />
-        Cart
+        {{ 'nav.cart' | t }}
         @if (cart.count()) {
           <span class="nav-badge">{{ cart.count() }}</span>
         }
@@ -24,33 +24,33 @@
       @if (auth.isAuthenticated()) {
         <a routerLink="/shop/orders" routerLinkActive="active">
           <mtb-icon name="package" />
-          My orders
+          {{ 'nav.orders' | t }}
         </a>
       }
-      <p>Tools</p>
+      <p>{{ 'nav.tools' | t }}</p>
       @for (item of nav; track item.path) {
         <a [routerLink]="item.path" routerLinkActive="active">
           <mtb-icon [name]="item.icon" />
-          {{ item.label }}
+          {{ item.label | t }}
         </a>
       }
-      <p>Account</p>
+      <p>{{ 'nav.account_section' | t }}</p>
       <a routerLink="/billing" routerLinkActive="active">
         <mtb-icon name="card" />
-        Billing
+        {{ 'nav.billing' | t }}
       </a>
       @if (auth.isAdmin()) {
         <a routerLink="/admin" routerLinkActive="active">
           <mtb-icon name="shield" />
-          Admin
+          {{ 'nav.admin' | t }}
         </a>
       }
     </nav>
     <div class="privacy">
       <mtb-icon name="shield" />
       <div>
-        <strong>Private by design</strong>
-        <span>Most tools run entirely in your browser.</span>
+        <strong>{{ 'nav.privacy_title' | t }}</strong>
+        <span>{{ 'nav.privacy_text' | t }}</span>
       </div>
     </div>
   </aside>
@@ -60,17 +60,18 @@
         <span class="brand-mark"><mtb-icon name="bolt" /></span>
         MartonToolBox
       </a>
-      <a class="header-cart" routerLink="/shop/cart" title="Cart">
+      <a class="header-cart" routerLink="/shop/cart" [title]="'nav.cart' | t">
         <mtb-icon name="cart" />
         @if (cart.count()) {
           <span class="nav-badge">{{ cart.count() }}</span>
         }
       </a>
+      <mtb-lang-switch />
       @if (auth.isAuthenticated()) {
         <div class="user-menu" (mouseenter)="openMenu()" (mouseleave)="closeMenuSoon()">
           <button type="button" class="account" (click)="toggleMenu()" [attr.aria-expanded]="menuOpen()" aria-haspopup="menu">
             <span class="avatar">{{ initial() }}</span>
-            <span class="account-name">{{ auth.user()?.displayName || 'Account' }}</span>
+            <span class="account-name">{{ auth.user()?.displayName || ('nav.account' | t) }}</span>
             <mtb-icon class="chevron" name="chevron" />
           </button>
           @if (menuOpen()) {
@@ -81,25 +82,25 @@
               </div>
               <a role="menuitem" routerLink="/account">
                 <mtb-icon name="user" />
-                Account
+                {{ 'nav.account' | t }}
               </a>
               <a role="menuitem" routerLink="/shop/orders">
                 <mtb-icon name="package" />
-                My orders
+                {{ 'nav.orders' | t }}
               </a>
               <a role="menuitem" routerLink="/billing">
                 <mtb-icon name="card" />
-                Billing
+                {{ 'nav.billing' | t }}
               </a>
               @if (auth.isAdmin()) {
                 <a role="menuitem" routerLink="/admin">
                   <mtb-icon name="shield" />
-                  Store admin
+                  {{ 'nav.store_admin' | t }}
                 </a>
               }
               <button role="menuitem" type="button" class="menu-logout" (click)="logout()">
                 <mtb-icon name="logout" />
-                Log out
+                {{ 'nav.logout' | t }}
               </button>
             </div>
           }
@@ -107,7 +108,7 @@
       } @else {
         <a class="account" routerLink="/login">
           <mtb-icon name="login" />
-          Log in
+          {{ 'nav.login' | t }}
         </a>
       }
     </header>

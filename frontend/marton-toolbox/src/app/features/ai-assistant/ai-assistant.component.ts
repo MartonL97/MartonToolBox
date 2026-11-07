@@ -5,6 +5,8 @@ import { firstValueFrom } from 'rxjs';
 import { AuthService } from '../../core/auth/auth.service';
 import { money } from '../../core/shop/cart.service';
 import { IconComponent } from '../../core/ui/icon.component';
+import { I18nService } from '../../core/i18n/i18n.service';
+import { I18N } from '../../core/i18n/translate.pipe';
 
 export interface ChatTurn {
   role: 'user' | 'assistant';
@@ -59,22 +61,19 @@ const MAX_TOTAL_CHARS = 32000;
 const MAX_MESSAGES = 40;
 const STORAGE_KEY = 'mtb_ai_chat';
 
-export const SUGGESTIONS = [
-  'Write a polite email asking a client to pay an overdue invoice',
-  'Explain what a CSV file is and how to clean one',
-  'Summarize the key points of this text: ',
-  'Give me 5 product description ideas for a T-shirt',
-];
+/** Keys of the example prompts (shown and sent in the user's language). */
+export const SUGGESTIONS = ['ai.s1', 'ai.s2', 'ai.s3', 'ai.s4'];
 
 @Component({
   standalone: true,
-  imports: [IconComponent],
+  imports: [IconComponent, ...I18N],
   templateUrl: './ai-assistant.component.html',
   styleUrl: './ai-assistant.component.scss',
 })
 export class AiAssistantComponent implements OnDestroy {
   private http = inject(HttpClient);
   private auth = inject(AuthService);
+  i18n = inject(I18nService);
   private router = inject(Router);
   private thread = viewChild<ElementRef<HTMLElement>>('thread');
   private input = viewChild<ElementRef<HTMLTextAreaElement>>('input');
@@ -109,11 +108,11 @@ export class AiAssistantComponent implements OnDestroy {
   /** "2 h 5 min" until some of the allowance frees up. */
   nextFreeIn = computed(() => {
     const at = this.quota()?.nextFreeAt;
-    return at ? duration(new Date(at).getTime() - this.now()) : '';
+    return at ? duration(new Date(at).getTime() - this.now(), this.i18n) : '';
   });
   planUntil = computed(() => {
     const at = this.quota()?.planExpiresAt;
-    return at ? formatDate(at) : '';
+    return at ? formatDate(at, this.i18n.locale()) : '';
   });
 
   constructor() {
@@ -160,10 +159,12 @@ export class AiAssistantComponent implements OnDestroy {
     this.buying.set(pack.id);
     this.packNotice.set(null);
     try {
-      const res = await firstValueFrom(this.http.post<{ data: { checkoutUrl: string } }>(`/api/ai/packs/${encodeURIComponent(pack.id)}/checkout`, {}));
+      const res = await firstValueFrom(
+        this.http.post<{ data: { checkoutUrl: string } }>(`/api/ai/packs/${encodeURIComponent(pack.id)}/checkout`, {}),
+      );
       this.leaveFor(res.data.checkoutUrl);
     } catch (err) {
-      const message = err instanceof HttpErrorResponse && err.error?.error ? err.error.error : "Couldn't start the payment. Please try again.";
+      const message = this.i18n.server(err instanceof HttpErrorResponse ? err.error?.error : null, 'ai.pay_failed');
       this.packNotice.set({ kind: 'failed', text: message });
       this.buying.set(null);
     }
@@ -176,7 +177,7 @@ export class AiAssistantComponent implements OnDestroy {
 
   async confirmPack(orderId: string, attempt: number) {
     clearTimeout(this.packTimer);
-    if (attempt === 0) this.packNotice.set({ kind: 'pending', text: 'Confirming your payment…' });
+    if (attempt === 0) this.packNotice.set({ kind: 'pending', text: this.i18n.t('ai.confirming') });
     try {
       const res = await firstValueFrom(this.http.post<{ data: PackOrder }>(`/api/ai/packs/orders/${orderId}/confirm`, {}));
       const order = res.data;
@@ -185,13 +186,19 @@ export class AiAssistantComponent implements OnDestroy {
         const q = order.quota;
         this.packNotice.set({
           kind: 'ok',
-          text: `Your ${order.packName} pack is active${q.planExpiresAt ? ` until ${formatDate(q.planExpiresAt)}` : ''}. You're now at ${q.percentUsed}% of your allowance.`,
+          text: q.planExpiresAt
+            ? this.i18n.t('ai.pack_active_until', {
+                pack: order.packName,
+                date: formatDate(q.planExpiresAt, this.i18n.locale()),
+                n: q.percentUsed,
+              })
+            : this.i18n.t('ai.pack_active', { pack: order.packName, n: q.percentUsed }),
         });
         this.forgetOrder();
         return;
       }
       if (order.status === 'Failed') {
-        this.packNotice.set({ kind: 'failed', text: "The payment didn't go through, so your pack wasn't added. You can try again." });
+        this.packNotice.set({ kind: 'failed', text: this.i18n.t('ai.pack_failed') });
         this.forgetOrder();
         return;
       }
@@ -204,7 +211,7 @@ export class AiAssistantComponent implements OnDestroy {
       // Keep polling; a passing error shouldn't fail the check.
     }
     if (attempt + 1 >= PACK_POLL_ATTEMPTS) {
-      this.packNotice.set({ kind: 'pending', text: 'Your payment is still being processed. The pack turns on as soon as PayU confirms it.' });
+      this.packNotice.set({ kind: 'pending', text: this.i18n.t('ai.pack_pending') });
       this.pendingOrder.set(orderId);
       return;
     }
@@ -228,7 +235,7 @@ export class AiAssistantComponent implements OnDestroy {
       const res = await firstValueFrom(this.http.get<{ data: AiStatus }>('/api/ai/status'));
       this.status.set(res.data);
     } catch {
-      this.status.set({ available: false, model: '', problem: "Couldn't reach the server. Please try again." });
+      this.status.set({ available: false, model: '', problem: this.i18n.t('ai.unreachable') });
     }
   }
 
@@ -265,7 +272,7 @@ export class AiAssistantComponent implements OnDestroy {
       return;
     }
     if (text.length > MAX_MESSAGE_CHARS) {
-      this.error.set(`Messages can be at most ${MAX_MESSAGE_CHARS.toLocaleString('en')} characters.`);
+      this.error.set(this.i18n.t('ai.too_long', { max: MAX_MESSAGE_CHARS.toLocaleString(this.i18n.locale()) }));
       return;
     }
     const history = trimHistory([...this.messages(), { role: 'user', content: text }]);
@@ -284,8 +291,8 @@ export class AiAssistantComponent implements OnDestroy {
         body: JSON.stringify({ messages: history }),
         signal: abort.signal,
       });
-      if (!res.ok) throw await chatError(res);
-      if (!res.body) throw new ChatError(0, 'The reply could not be read.');
+      if (!res.ok) throw await chatError(res, this.i18n);
+      if (!res.body) throw new ChatError(0, this.i18n.t('ai.unreadable'));
 
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
@@ -306,7 +313,7 @@ export class AiAssistantComponent implements OnDestroy {
         this.router.navigate(['/login'], { queryParams: { expired: '1' } });
         return;
       } else {
-        this.error.set(err instanceof ChatError ? err.message : "Couldn't reach the AI assistant. Please try again.");
+        this.error.set(err instanceof ChatError ? err.message : this.i18n.t('ai.no_reach'));
         if (err instanceof ChatError && err.status === 503) this.checkStatus();
         if (err instanceof ChatError && err.quota) {
           // Limit reached: show the real numbers and the packs.
@@ -356,28 +363,30 @@ class ChatError extends Error {
   }
 }
 
-async function chatError(res: Response): Promise<ChatError> {
-  if (res.status === 402) return new ChatError(402, 'An active license is required to use this tool.');
+async function chatError(res: Response, i18n: I18nService): Promise<ChatError> {
+  if (res.status === 402) return new ChatError(402, i18n.t('common.license_required'));
   try {
     const body = await res.json();
-    if (body?.error) return new ChatError(res.status, body.error, body.code === 'ai_limit' ? body.quota : undefined);
+    if (body?.error) return new ChatError(res.status, i18n.server(body.error), body.code === 'ai_limit' ? body.quota : undefined);
   } catch {
     /* not JSON */
   }
-  return new ChatError(res.status, res.status === 503 ? "The AI model isn't available right now." : 'The AI assistant failed. Please try again.');
+  return new ChatError(res.status, i18n.t(res.status === 503 ? 'ai.unavailable' : 'ai.failed'));
 }
 
-/** 7 230 000 ms -> "2 h 1 min"; under a minute reads "less than a minute". */
-export function duration(ms: number): string {
-  if (ms < 60_000) return 'less than a minute';
+/** 7 230 000 ms -> "2 h 1 min"; under a minute reads "less than a minute" (in the user's language with i18n). */
+export function duration(ms: number, i18n?: Pick<I18nService, 't'>): string {
+  const t = (key: string, fallback: string, params: Record<string, number> = {}) => (i18n ? i18n.t(key, params) : fallback);
+  if (ms < 60_000) return t('ai.dur_lt_min', 'less than a minute');
   const minutes = Math.ceil(ms / 60_000);
   const h = Math.floor(minutes / 60);
   const m = minutes % 60;
-  return h ? (m ? `${h} h ${m} min` : `${h} h`) : `${m} min`;
+  if (h && m) return t('ai.dur_hm', `${h} h ${m} min`, { h, m });
+  return h ? t('ai.dur_h', `${h} h`, { h }) : t('ai.dur_m', `${m} min`, { m });
 }
 
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+function formatDate(iso: string, locale: string): string {
+  return new Date(iso).toLocaleDateString(locale, { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
 /** Keeps the newest turns within the server's limits; the oldest are dropped first. */

@@ -1,10 +1,11 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
-import { DatePipe } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { AuthService } from '../../core/auth/auth.service';
 import { IconComponent } from '../../core/ui/icon.component';
+import { I18nService } from '../../core/i18n/i18n.service';
+import { I18N } from '../../core/i18n/translate.pipe';
 
 interface License {
   licenseKey: string;
@@ -38,7 +39,7 @@ const COMPLETENESS: Field[] = ['displayName', 'phone', 'address', 'city', 'count
 
 @Component({
   standalone: true,
-  imports: [RouterLink, DatePipe, IconComponent],
+  imports: [RouterLink, IconComponent, ...I18N],
   styleUrl: './account.component.scss',
   templateUrl: './account.component.html',
 })
@@ -46,6 +47,7 @@ export class AccountComponent {
   private http = inject(HttpClient);
   private auth = inject(AuthService);
   private router = inject(Router);
+  i18n = inject(I18nService);
   account = signal<AccountData | null>(null);
   loading = signal(true);
   loadError = signal('');
@@ -59,14 +61,14 @@ export class AccountComponent {
   initial = computed(() => (this.form().displayName || this.account()?.profile.email || '?').trim().charAt(0).toUpperCase());
   missing = computed(() => {
     const labels: Record<string, string> = {
-      displayName: 'Full name',
-      phone: 'Phone',
-      address: 'Street address',
-      city: 'City',
-      county: 'County',
-      postalCode: 'Postal code',
+      displayName: 'cart.full_name',
+      phone: 'cart.phone',
+      address: 'cart.street',
+      city: 'cart.city',
+      county: 'acct.county',
+      postalCode: 'cart.postal_code',
     };
-    return COMPLETENESS.filter((f) => !this.savedForm()[f].trim()).map((f) => labels[f]);
+    return COMPLETENESS.filter((f) => !this.savedForm()[f].trim()).map((f) => this.i18n.t(labels[f]));
   });
   completeness = computed(() => Math.round((100 * (COMPLETENESS.length - this.missing().length)) / COMPLETENESS.length));
 
@@ -77,7 +79,7 @@ export class AccountComponent {
         this.form.set(toForm(res.data.profile));
         this.savedForm.set(toForm(res.data.profile));
       })
-      .catch(() => this.loadError.set('Could not load your account.'))
+      .catch(() => this.loadError.set(this.i18n.t('acct.load_failed')))
       .finally(() => this.loading.set(false));
   }
 
@@ -101,7 +103,7 @@ export class AccountComponent {
     } catch (err) {
       const e = err as HttpErrorResponse;
       const fieldErrors = e.error?.errors ? Object.values(e.error.errors).flat().join(' ') : '';
-      this.saveError.set(e.error?.error ?? (fieldErrors || 'Could not save your profile. Please try again.'));
+      this.saveError.set(e.error?.error ? this.i18n.server(e.error.error) : fieldErrors || this.i18n.t('acct.save_failed'));
     } finally {
       this.saving.set(false);
     }

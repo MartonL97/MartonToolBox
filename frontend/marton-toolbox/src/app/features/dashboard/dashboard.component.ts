@@ -4,6 +4,8 @@ import { AuthService } from '../../core/auth/auth.service';
 import { CartService, money } from '../../core/shop/cart.service';
 import { ToolService } from '../../core/services/tool.service';
 import { IconComponent } from '../../core/ui/icon.component';
+import { I18nService } from '../../core/i18n/i18n.service';
+import { I18N } from '../../core/i18n/translate.pipe';
 
 /** The API stores icon names; the offline fallback list still uses the old glyphs. */
 const GLYPH_TO_ICON: Record<string, string> = { '▦': 'table', '▧': 'image', '▤': 'file', '⇄': 'convert' };
@@ -18,7 +20,7 @@ const TONES: Record<string, string> = {
 
 @Component({
   standalone: true,
-  imports: [RouterLink, IconComponent],
+  imports: [RouterLink, IconComponent, ...I18N],
   templateUrl: './dashboard.component.html',
   styleUrl: './dashboard.component.scss',
 })
@@ -29,7 +31,18 @@ export class DashboardComponent {
   money = money;
   query = signal('');
   tools = signal<any[]>([]);
-  filtered = computed(() => this.tools().filter((t) => (t.name + t.description).toLowerCase().includes(this.query().toLowerCase())));
+  private i18n = inject(I18nService);
+  /** Names and descriptions in the current language (the API sends English); search matches what the user sees. */
+  localized = computed(() => {
+    this.i18n.lang();
+    return this.tools().map((t) => ({
+      ...t,
+      name: this.i18n.tOr(`tool.${t.slug}`, t.name),
+      description: this.i18n.tOr(`tool.${t.slug}.desc`, t.description),
+      category: this.i18n.tOr(`category.${t.category}`, t.category),
+    }));
+  });
+  filtered = computed(() => this.localized().filter((t) => (t.name + t.description).toLowerCase().includes(this.query().toLowerCase())));
   firstName = computed(() => (this.auth.user()?.displayName ?? '').trim().split(/\s+/)[0]);
   constructor() {
     this.service.list().subscribe((x) => this.tools.set(x));

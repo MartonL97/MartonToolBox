@@ -1,6 +1,8 @@
-import { Component, signal } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import JSZip from 'jszip';
 import { PDFDocument, degrees } from 'pdf-lib';
+import { I18nService } from '../../core/i18n/i18n.service';
+import { I18N } from '../../core/i18n/translate.pipe';
 
 type Mode = 'merge' | 'organize' | 'split';
 interface MergeItem {
@@ -19,10 +21,12 @@ let nextId = 1;
 
 @Component({
   standalone: true,
+  imports: [...I18N],
   styleUrl: './pdf-toolkit.component.scss',
   templateUrl: './pdf-toolkit.component.html',
 })
 export class PdfToolkitComponent {
+  private i18n = inject(I18nService);
   mode = signal<Mode>('merge');
   busy = signal(false);
   error = signal('');
@@ -56,7 +60,7 @@ export class PdfToolkitComponent {
           this.mergeItems.update((x) => [...x, { id: nextId++, file, kind: 'image', pages: 1 }]);
         }
       } catch (err) {
-        this.error.set(describe(err, file.name));
+        this.error.set(describe(err, this.i18n, file.name));
       }
     }
     input.value = '';
@@ -123,12 +127,12 @@ export class PdfToolkitComponent {
   }
 
   splitPreview(): string {
-    if (this.splitMode() === 'each') return `Creates ${this.sourcePageCount()} files, one per page.`;
+    if (this.splitMode() === 'each') return this.i18n.t('pdf.creates_each', { n: this.sourcePageCount() });
     try {
       const groups = parseRanges(this.ranges(), this.sourcePageCount());
-      return `Creates ${groups.length} ${groups.length === 1 ? 'file' : 'files'}: ${groups.map((g) => label(g)).join(', ')}.`;
+      return this.i18n.plural('pdf.creates', groups.length, { list: groups.map((g) => label(g)).join(', ') });
     } catch (err) {
-      return (err as Error).message;
+      return describe(err, this.i18n);
     }
   }
 
@@ -179,7 +183,7 @@ export class PdfToolkitComponent {
       this.sourceFile.set(file);
       this.sourcePageCount.set(doc.getPageCount());
     } catch (err) {
-      this.error.set(describe(err, file.name));
+      this.error.set(describe(err, this.i18n, file.name));
     }
   }
 
@@ -189,7 +193,7 @@ export class PdfToolkitComponent {
     try {
       await work();
     } catch (err) {
-      this.error.set(describe(err));
+      this.error.set(describe(err, this.i18n));
     } finally {
       this.busy.set(false);
     }
@@ -222,30 +226,45 @@ function toPng(file: File): Promise<ArrayBuffer> {
       canvas.height = img.height;
       canvas.getContext('2d')!.drawImage(img, 0, 0);
       URL.revokeObjectURL(url);
-      canvas.toBlob((b) => (b ? b.arrayBuffer().then(resolve, reject) : reject(new Error('Could not convert image.'))), 'image/png');
+      canvas.toBlob(
+        (b) => (b ? b.arrayBuffer().then(resolve, reject) : reject(new PdfError('pdf.err_convert', {}, 'Could not convert image.'))),
+        'image/png',
+      );
     };
     img.onerror = () => {
       URL.revokeObjectURL(url);
-      reject(new Error(`Could not read image ${file.name}.`));
+      reject(new PdfError('pdf.err_image', { name: file.name }, `Could not read image ${file.name}.`));
     };
     img.src = url;
   });
 }
 
-/** "1-3, 5, 7-" → [[0,1,2],[4],[6..last]] (zero-based). Throws a user-facing message on bad input. */
+/** A user-facing error: the English message, plus the key and values to show it in the user's language. */
+export class PdfError extends Error {
+  constructor(
+    readonly key: string,
+    readonly params: Record<string, string | number>,
+    message: string,
+  ) {
+    super(message);
+  }
+}
+
+/** "1-3, 5, 7-" → [[0,1,2],[4],[6..last]] (zero-based). Throws a user-facing PdfError on bad input. */
 export function parseRanges(input: string, pageCount: number): number[][] {
   const parts = input
     .split(',')
     .map((s) => s.trim())
     .filter(Boolean);
-  if (!parts.length) throw new Error('Enter at least one page range, e.g. 1-3, 5.');
+  if (!parts.length) throw new PdfError('pdf.err_no_range', {}, 'Enter at least one page range, e.g. 1-3, 5.');
   return parts.map((part) => {
     const match = /^(\d+)?\s*(-)?\s*(\d+)?$/.exec(part);
-    if (!match || (!match[1] && !match[3])) throw new Error(`"${part}" isn't a valid range.`);
+    if (!match || (!match[1] && !match[3])) throw new PdfError('pdf.err_invalid', { part }, `"${part}" isn't a valid range.`);
     const start = match[1] ? +match[1] : 1;
     const end = match[2] ? (match[3] ? +match[3] : pageCount) : start;
-    if (start > end) throw new Error(`"${part}" runs backwards. Write the lower page first.`);
-    if (start < 1 || end > pageCount) throw new Error(`"${part}" is outside pages 1–${pageCount}.`);
+    if (start > end) throw new PdfError('pdf.err_backwards', { part }, `"${part}" runs backwards. Write the lower page first.`);
+    if (start < 1 || end > pageCount)
+      throw new PdfError('pdf.err_outside', { part, max: pageCount }, `"${part}" is outside pages 1–${pageCount}.`);
     return Array.from({ length: end - start + 1 }, (_, i) => start - 1 + i);
   });
 }
@@ -262,11 +281,12 @@ function baseName(name: string) {
   return name.replace(/\.pdf$/i, '');
 }
 
-function describe(err: unknown, fileName?: string) {
-  const message = err instanceof Error ? err.message : String(err);
+function describe(err: unknown, i18n: I18nService, fileName?: string) {
   const prefix = fileName ? `${fileName}: ` : '';
-  if (/encrypt/i.test(message)) return `${prefix}password-protected PDFs aren't supported. Remove the password first.`;
-  if (/parse|invalid|header/i.test(message)) return `${prefix}this doesn't look like a valid PDF.`;
+  if (err instanceof PdfError) return prefix + i18n.t(err.key, err.params);
+  const message = err instanceof Error ? err.message : String(err);
+  if (/encrypt/i.test(message)) return prefix + i18n.t('pdf.err_encrypted');
+  if (/parse|invalid|header/i.test(message)) return prefix + i18n.t('pdf.err_not_pdf');
   return prefix + message;
 }
 

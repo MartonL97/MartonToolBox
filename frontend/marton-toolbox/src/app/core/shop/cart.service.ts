@@ -34,14 +34,6 @@ export interface CartLine {
   imageUrl: string | null;
   quantity: number;
 }
-export const ORDER_STATUS_LABELS: Record<ShopOrder['status'], string> = {
-  Paid: 'Paid',
-  Pending: 'Awaiting payment',
-  Failed: 'Not paid',
-  CancelRequested: 'Waiting for cancellation',
-  Cancelled: 'Cancelled',
-};
-
 export interface ShopOrder {
   id: string;
   /** CancelRequested: the buyer asked to cancel an unpaid order; Cancelled: an admin did. */

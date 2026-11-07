@@ -231,6 +231,66 @@ a.account:not(:has(.avatar)) {
   border-color: var(--border-strong);
   box-shadow: var(--shadow-sm);
 }
+/* Language picker (top right) */
+mtb-lang-switch {
+  position: relative;
+}
+.lang-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 38px;
+  padding: 0 12px 0 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  box-shadow: var(--shadow-xs);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-2);
+  cursor: pointer;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
+}
+.lang-button:hover {
+  border-color: var(--border-strong);
+  box-shadow: var(--shadow-sm);
+}
+.flag {
+  display: inline-block;
+  width: 22px;
+  height: 15px;
+  flex-shrink: 0;
+  border-radius: 3px;
+  overflow: hidden;
+  box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.12);
+}
+.flag svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.lang-menu {
+  min-width: 190px;
+}
+.menu.lang-menu button {
+  color: var(--text);
+}
+.lang-menu .lang-code {
+  margin-left: auto;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-3);
+}
+.menu.lang-menu button:hover,
+.menu.lang-menu button.current {
+  background: var(--brand-soft);
+}
+.menu.lang-menu button.current {
+  font-weight: 600;
+}
 /* User menu (top right) */
 .user-menu {
   position: relative;
@@ -1928,8 +1988,12 @@ tr:last-child td {
   .mobile-brand {
     display: flex;
   }
-  .account-name {
+  .account-name,
+  .lang-button .lang-code {
     display: none;
+  }
+  .lang-button {
+    padding: 0 9px;
   }
   .account:has(.avatar) {
     padding: 5px;

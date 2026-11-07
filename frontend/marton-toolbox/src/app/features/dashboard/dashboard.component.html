@@ -1,43 +1,40 @@
 <section class="page">
   <div class="hero">
     <div class="hero-copy">
-      <p class="eyebrow">{{ auth.user() ? 'Welcome back, ' + firstName() : "Marton's shop & toolbox" }}</p>
+      <p class="eyebrow">{{ auth.user() ? ('dash.welcome' | t: { name: firstName() }) : ('dash.eyebrow' | t) }}</p>
       <h1>
-        Useful products,
-        <span class="hero-accent">delivered to your door.</span>
+        {{ 'dash.title' | t }}
+        <span class="hero-accent">{{ 'dash.title_accent' | t }}</span>
       </h1>
-      <p class="lead">
-        Hand-picked products from Marton's shop, shipped across Romania, plus fast, private tools for the small jobs that
-        keep your work moving.
-      </p>
+      <p class="lead">{{ 'dash.lead' | t }}</p>
       <div class="hero-actions">
         <a class="primary hero-cta" routerLink="/shop">
           <mtb-icon name="bag" />
-          Shop products
+          {{ 'dash.shop_cta' | t }}
         </a>
         <a class="hero-link" href="#tools" (click)="scrollToTools($event)">
-          Explore tools
+          {{ 'dash.explore_tools' | t }}
           <mtb-icon name="arrow" />
         </a>
       </div>
       <div class="hero-points">
         <span>
           <mtb-icon name="package" />
-          Shipped across Romania
+          {{ 'dash.point_shipping' | t }}
         </span>
         @if (cart.catalog(); as c) {
           <span>
             <mtb-icon name="bag" />
-            Free shipping over {{ money(c.freeShippingOver, c.currency) }}
+            {{ 'dash.point_free_shipping' | t: { amount: money(c.freeShippingOver, c.currency) } }}
           </span>
         }
         <span>
           <mtb-icon name="shield" />
-          Private tools
+          {{ 'dash.point_private' | t }}
         </span>
         <span>
           <mtb-icon name="card" />
-          One-time payment
+          {{ 'dash.point_payment' | t }}
         </span>
       </div>
     </div>
@@ -47,18 +44,18 @@
       <span class="float-tile t4" aria-hidden="true"><mtb-icon name="cart" /></span>
       <span class="float-tile t5" aria-hidden="true"><mtb-icon name="file" /></span>
       <!-- The AI Assistant is the centrepiece: a small chat preview that opens the tool. -->
-      <a class="hero-ai" routerLink="/tools/ai-assistant" aria-label="Open the AI Assistant">
+      <a class="hero-ai" routerLink="/tools/ai-assistant" [attr.aria-label]="'dash.ai_open' | t">
         <span class="hero-ai-head">
           <span class="hero-ai-icon"><mtb-icon name="sparkles" /></span>
           <span>
-            <strong>AI Assistant</strong>
-            <small>Private · runs on our server</small>
+            <strong>{{ 'tool.ai-assistant' | t }}</strong>
+            <small>{{ 'dash.ai_private' | t }}</small>
           </span>
         </span>
-        <span class="hero-ai-bubble user" aria-hidden="true">Write a short description for my T-shirt</span>
-        <span class="hero-ai-bubble ai" aria-hidden="true">Soft cotton, a clean fit and a logo that starts conversations…</span>
+        <span class="hero-ai-bubble user" aria-hidden="true">{{ 'dash.ai_user' | t }}</span>
+        <span class="hero-ai-bubble ai" aria-hidden="true">{{ 'dash.ai_reply' | t }}</span>
         <span class="hero-ai-try">
-          Try the AI Assistant
+          {{ 'dash.ai_try' | t }}
           <mtb-icon name="arrow" />
         </span>
       </a>
@@ -68,26 +65,26 @@
   <a class="products-banner" routerLink="/shop">
     <span class="products-icon"><mtb-icon name="bag" /></span>
     <div>
-      <h2>Useful products from Marton's shop</h2>
-      <p>Hand-picked items, starting with the MartonToolBox T-shirt, shipped to your door across Romania.</p>
+      <h2>{{ 'dash.banner_title' | t }}</h2>
+      <p>{{ 'dash.banner_text' | t }}</p>
     </div>
     <span class="open">
-      Browse products
+      {{ 'dash.banner_cta' | t }}
       <span class="open-arrow"><mtb-icon name="arrow" /></span>
     </span>
   </a>
 
   <div class="section-heading tools-heading" id="tools">
     <div>
-      <h2>Your toolbox</h2>
-      <p>Fast, private utilities. Pick a tool to get started.</p>
+      <h2>{{ 'dash.tools_title' | t }}</h2>
+      <p>{{ 'dash.tools_text' | t }}</p>
     </div>
     <div class="tools-controls">
       <label class="search">
         <mtb-icon name="search" />
-        <input [value]="query()" (input)="query.set($any($event.target).value)" placeholder="Search tools…" />
+        <input [value]="query()" (input)="query.set($any($event.target).value)" [placeholder]="'dash.search' | t" />
       </label>
-      <span class="count">{{ filtered().length }} {{ filtered().length === 1 ? 'tool' : 'tools' }}</span>
+      <span class="count">{{ 'dash.tools' | tn: filtered().length }}</span>
     </div>
   </div>
   <div class="tool-grid">
@@ -100,12 +97,12 @@
         <h3>{{ tool.name }}</h3>
         <p>{{ tool.description }}</p>
         <span class="open">
-          Open tool
+          {{ 'dash.open_tool' | t }}
           <span class="open-arrow"><mtb-icon name="arrow" /></span>
         </span>
       </a>
     } @empty {
-      <p class="empty-preview">No tools match “{{ query() }}”.</p>
+      <p class="empty-preview">{{ 'dash.no_match' | t: { q: query() } }}</p>
     }
   </div>
 </section>

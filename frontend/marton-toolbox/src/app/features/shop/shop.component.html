@@ -1,18 +1,18 @@
 <section class="page">
   <div class="shop-header">
     <div>
-      <p class="eyebrow">Products</p>
-      <h1>Useful products from Marton's shop</h1>
+      <p class="eyebrow">{{ 'shop.eyebrow' | t }}</p>
+      <h1>{{ 'shop.title' | t }}</h1>
       <p class="lead">
-        Shipped across Romania.
+        {{ 'shop.shipped' | t }}
         @if (cart.catalog(); as c) {
-          Free shipping on orders over {{ money(c.freeShippingOver, c.currency) }}.
+          {{ 'shop.free_over' | t: { amount: money(c.freeShippingOver, c.currency) } }}
         }
       </p>
     </div>
     <a class="secondary cart-link" routerLink="/shop/cart">
       <mtb-icon name="cart" />
-      Cart
+      {{ 'nav.cart' | t }}
       @if (cart.count()) {
         <span class="badge">{{ cart.count() }}</span>
       }
@@ -34,31 +34,53 @@
           class="product-search"
           [value]="productQuery()"
           (input)="productQuery.set($any($event.target).value)"
-          placeholder="Search products…"
+          [placeholder]="'shop.search' | t"
         />
       </label>
-      <div class="filter-chips" role="group" aria-label="Availability">
-        <button type="button" class="chip" [class.active]="!inStockOnly()" [attr.aria-pressed]="!inStockOnly()" (click)="inStockOnly.set(false)">
-          All
+      <div class="filter-chips" role="group" [attr.aria-label]="'shop.availability' | t">
+        <button
+          type="button"
+          class="chip"
+          [class.active]="!inStockOnly()"
+          [attr.aria-pressed]="!inStockOnly()"
+          (click)="inStockOnly.set(false)"
+        >
+          {{ 'shop.all' | t }}
         </button>
-        <button type="button" class="chip" [class.active]="inStockOnly()" [attr.aria-pressed]="inStockOnly()" (click)="inStockOnly.set(true)">
-          In stock
+        <button
+          type="button"
+          class="chip"
+          [class.active]="inStockOnly()"
+          [attr.aria-pressed]="inStockOnly()"
+          (click)="inStockOnly.set(true)"
+        >
+          {{ 'shop.in_stock' | t }}
         </button>
       </div>
       @if (sizeOptions().length) {
-        <select class="filter-select size-filter" aria-label="Size" [value]="sizeFilter()" (change)="sizeFilter.set($any($event.target).value)">
-          <option value="">Any size</option>
+        <select
+          class="filter-select size-filter"
+          [attr.aria-label]="'common.size' | t"
+          [value]="sizeFilter()"
+          (change)="sizeFilter.set($any($event.target).value)"
+        >
+          <option value="">{{ 'shop.any_size' | t }}</option>
           @for (size of sizeOptions(); track size) {
             <option [value]="size">{{ size }}</option>
           }
         </select>
       }
-      <select class="filter-select sort-filter" aria-label="Sort" [value]="sort()" (change)="sort.set($any($event.target).value)">
-        <option value="featured">Featured</option>
-        <option value="price-asc">Price: low to high</option>
-        <option value="price-desc">Price: high to low</option>
+      <select
+        class="filter-select sort-filter"
+        [attr.aria-label]="'shop.sort' | t"
+        [value]="sort()"
+        (change)="sort.set($any($event.target).value)"
+      >
+        <option value="featured">{{ 'shop.sort_featured' | t }}</option>
+        <option value="price-asc">{{ 'shop.sort_asc' | t }}</option>
+        <option value="price-desc">{{ 'shop.sort_desc' | t }}</option>
       </select>
-      <span class="count product-count">{{ matchingProducts().length }} {{ matchingProducts().length === 1 ? 'product' : 'products' }}</span>
+      <span class="count product-count">{{ 'shop.products' | tn: matchingProducts().length }}</span>
     </div>
   }
 
@@ -72,7 +94,7 @@
             <mtb-icon name="package" />
           }
           @if (product.stock === 0) {
-            <span class="stock-flag">Sold out</span>
+            <span class="stock-flag">{{ 'shop.sold_out' | t }}</span>
           }
         </div>
         <div class="product-body">
@@ -83,15 +105,15 @@
           @if (product.sizes.length) {
             <div class="size-picker">
               <div class="size-label">
-                <span>Size</span>
+                <span>{{ 'common.size' | t }}</span>
                 @if (selected(product); as s) {
                   <strong>{{ s.size }}</strong>
                   @if (s.stock > 0 && s.stock <= 3) {
-                    <em>Only {{ s.stock }} left</em>
+                    <em>{{ 'shop.only_left' | t: { n: s.stock } }}</em>
                   }
                 }
               </div>
-              <div class="sizes" role="radiogroup" [attr.aria-label]="'Size for ' + product.name">
+              <div class="sizes" role="radiogroup" [attr.aria-label]="'shop.size_for' | t: { name: product.name }">
                 @for (s of product.sizes; track s.id) {
                   <button
                     type="button"
@@ -100,7 +122,7 @@
                     [class.active]="selected(product)?.id === s.id"
                     [attr.aria-checked]="selected(product)?.id === s.id"
                     [disabled]="s.stock === 0"
-                    [title]="s.stock === 0 ? 'Sold out' : 'Size ' + s.size"
+                    [title]="s.stock === 0 ? ('shop.sold_out' | t) : ('shop.size_n' | t: { size: s.size })"
                     (click)="pick(product, s)"
                   >
                     {{ s.size }}
@@ -114,12 +136,12 @@
             <button class="primary" [disabled]="!canAdd(product)" (click)="add(product)">
               @if (justAdded() === product.id) {
                 <mtb-icon name="check" />
-                Added to cart
+                {{ 'shop.added' | t }}
               } @else if (product.sizes.length && !selected(product)) {
-                Select a size
+                {{ 'shop.select_size' | t }}
               } @else {
                 <mtb-icon name="plus" />
-                Add to cart
+                {{ 'shop.add' | t }}
               }
             </button>
           </div>
@@ -128,8 +150,8 @@
     } @empty {
       @if (products().length) {
         <div class="empty-preview product-empty">
-          No products match your filters.
-          <button type="button" class="link-button" (click)="clearFilters()">Clear filters</button>
+          {{ 'shop.no_match' | t }}
+          <button type="button" class="link-button" (click)="clearFilters()">{{ 'shop.clear_filters' | t }}</button>
         </div>
       }
     }
@@ -139,10 +161,10 @@
     <a class="cart-bar" routerLink="/shop/cart">
       <span>
         <mtb-icon name="cart" />
-        {{ cart.count() }} {{ cart.count() === 1 ? 'item' : 'items' }} · {{ money(cart.subtotal()) }}
+        {{ 'common.items' | tn: cart.count() }} · {{ money(cart.subtotal()) }}
       </span>
       <span>
-        Go to checkout
+        {{ 'shop.go_checkout' | t }}
         <mtb-icon name="arrow" />
       </span>
     </a>

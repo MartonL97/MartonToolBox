@@ -1,8 +1,9 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
-import { DatePipe } from '@angular/common';
 import { firstValueFrom } from 'rxjs';
-import { ORDER_STATUS_LABELS, ShopOrder, money } from '../../core/shop/cart.service';
+import { ShopOrder, money } from '../../core/shop/cart.service';
+import { I18nService } from '../../core/i18n/i18n.service';
+import { I18N } from '../../core/i18n/translate.pipe';
 
 interface ActiveLicense {
   id: string;
@@ -84,6 +85,13 @@ const emptyProduct = (): ProductForm => ({
 });
 
 /** "S:20, M:15" -> [{size:'S',stock:20},…]. Throws a readable message on bad input. */
+/** A sizes entry that isn't "S:20"-shaped (shown in the admin's language). */
+class SizeFormatError extends Error {
+  constructor(readonly part: string) {
+    super(`"${part}" should look like S:20`);
+  }
+}
+
 function parseSizes(text: string): { size: string; stock: number }[] {
   return text
     .split(',')
@@ -91,19 +99,20 @@ function parseSizes(text: string): { size: string; stock: number }[] {
     .filter(Boolean)
     .map((part) => {
       const m = /^([^:]{1,20}):\s*(\d+)$/.exec(part);
-      if (!m) throw new Error(`"${part}" should look like S:20`);
+      if (!m) throw new SizeFormatError(part);
       return { size: m[1].trim().toUpperCase(), stock: Number(m[2]) };
     });
 }
 
 @Component({
   standalone: true,
-  imports: [DatePipe],
+  imports: [...I18N],
   styleUrl: './admin.component.scss',
   templateUrl: './admin.component.html',
 })
 export class AdminComponent {
   private http = inject(HttpClient);
+  i18n = inject(I18nService);
   tab = signal<Tab>('orders');
   loading = signal(false);
   loaded = signal(false);
@@ -124,7 +133,11 @@ export class AdminComponent {
     const byId = new Map<string, InventoryProduct>();
     for (const r of this.inventory().rows) {
       let p = byId.get(r.productId);
-      if (!p) byId.set(r.productId, (p = { productId: r.productId, productName: r.productName, isActive: r.isActive, rows: [], available: 0, level: 'ok' }));
+      if (!p)
+        byId.set(
+          r.productId,
+          (p = { productId: r.productId, productName: r.productName, isActive: r.isActive, rows: [], available: 0, level: 'ok' }),
+        );
       p.rows.push(r);
       p.available += r.available;
     }
@@ -144,7 +157,6 @@ export class AdminComponent {
   confirmCancel = signal<string | null>(null);
   /** Orders whose buyer asked to cancel; shown on the orders tab so they aren't missed. */
   cancelRequests = computed(() => this.shopOrders().filter((o) => o.order.status === 'CancelRequested').length);
-  statusLabels = ORDER_STATUS_LABELS;
   emptyProduct = emptyProduct;
   money = money;
 
@@ -236,7 +248,7 @@ export class AdminComponent {
       .map((r) => ({ variantId: r.variantId, stock: this.pendingStock(r)! }));
     if (!items.length) return;
     if (items.some((i) => !Number.isInteger(i.stock) || i.stock < 0)) {
-      this.error.set('Stock must be a whole number, 0 or more.');
+      this.error.set(this.i18n.t('adm.err_stock'));
       return;
     }
     await this.run(p.productId, async () => {
@@ -272,7 +284,7 @@ export class AdminComponent {
       this.loaded.set(true);
     } catch {
       this.loaded.set(false);
-      this.error.set('Could not load admin data. Please reload the page.');
+      this.error.set(this.i18n.t('adm.err_load'));
     } finally {
       this.loading.set(false);
     }
@@ -325,12 +337,12 @@ export class AdminComponent {
       await work();
     } catch (err) {
       if (!(err instanceof HttpErrorResponse)) {
-        this.error.set((err as Error).message);
+        this.error.set(err instanceof SizeFormatError ? this.i18n.t('adm.err_size_format', { part: err.part }) : (err as Error).message);
         return;
       }
       const e = err;
       const fieldErrors = e.error?.errors ? Object.values(e.error.errors).flat().join(' ') : '';
-      this.error.set(e.error?.error ?? (fieldErrors || "That didn't work. Please try again."));
+      this.error.set(e.error?.error ? this.i18n.server(e.error.error) : fieldErrors || this.i18n.t('adm.err_generic'));
     } finally {
       this.busy.set(null);
     }

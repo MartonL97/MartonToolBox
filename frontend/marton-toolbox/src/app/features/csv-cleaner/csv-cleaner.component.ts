@@ -1,5 +1,6 @@
 import { Component, signal } from '@angular/core';
-@Component({ standalone: true, templateUrl: './csv-cleaner.component.html', styleUrl: './csv-cleaner.component.scss' })
+import { I18N } from '../../core/i18n/translate.pipe';
+@Component({ standalone: true, imports: [...I18N], templateUrl: './csv-cleaner.component.html', styleUrl: './csv-cleaner.component.scss' })
 export class CsvCleanerComponent {
   Math = Math;
   file = signal<File | null>(null);
@@ -9,10 +10,10 @@ export class CsvCleanerComponent {
   empty = signal(true);
   trim = signal(true);
   stats = () => [
-    { label: 'Rows', value: this.rows().length },
-    { label: 'Columns', value: this.headers().length },
-    { label: 'Duplicates', value: this.duplicates() },
-    { label: 'Empty rows', value: this.rows().filter((r) => r.every((x) => !x.trim())).length },
+    { label: 'csv.rows', value: this.rows().length },
+    { label: 'csv.columns', value: this.headers().length },
+    { label: 'csv.duplicates', value: this.duplicates() },
+    { label: 'csv.empty_rows', value: this.rows().filter((r) => r.every((x) => !x.trim())).length },
   ];
   load(e: Event) {
     const f = (e.target as HTMLInputElement).files?.[0];

@@ -2,31 +2,33 @@
   @if (checking()) {
     <div class="status-banner">
       <span class="spinner"></span>
-      <div><h1>Checking your license…</h1></div>
+      <div>
+        <h1>{{ 'billing.checking' | t }}</h1>
+      </div>
     </div>
   } @else {
     @if (license(); as l) {
-      <p class="eyebrow">YOUR LICENSE</p>
-      <h1>You're all set</h1>
-      <p class="lead">Your lifetime license is active — every tool is unlocked for your account.</p>
+      <p class="eyebrow">{{ 'billing.eyebrow' | t }}</p>
+      <h1>{{ 'billing.title' | t }}</h1>
+      <p class="lead">{{ 'billing.lead' | t }}</p>
 
       <div class="license-card">
         <div class="license-top">
           <span class="license-icon"><mtb-icon name="bolt" /></span>
           <div>
-            <strong>{{ l.product }} license</strong>
+            <strong>{{ 'billing.license' | t: { product: l.product } }}</strong>
             <span>
-              Active since {{ l.purchasedAt | date: 'd MMMM y' }}
+              {{ 'billing.since' | t: { date: (l.purchasedAt | ldate: 'd MMMM y') } }}
               @if (l.expiresAt) {
-                · expires {{ l.expiresAt | date: 'd MMMM y' }}
+                {{ 'billing.expires' | t: { date: (l.expiresAt | ldate: 'd MMMM y') } }}
               } @else {
-                · never expires
+                {{ 'billing.never' | t }}
               }
             </span>
           </div>
           <span class="status-pill" data-status="shipped">
             <mtb-icon name="check" />
-            {{ l.status }}
+            {{ 'license.status.' + l.status | t }}
           </span>
         </div>
         <div class="license-key-row">
@@ -34,26 +36,28 @@
           <button type="button" class="secondary" (click)="copyKey()">
             @if (copied()) {
               <mtb-icon name="check" />
-              Copied
+              {{ 'billing.copied' | t }}
             } @else {
-              Copy key
+              {{ 'billing.copy' | t }}
             }
           </button>
         </div>
       </div>
 
       <div class="actions">
-        <a class="primary" routerLink="/dashboard">Go to your tools</a>
-        <a class="secondary" routerLink="/account">Account</a>
+        <a class="primary" routerLink="/dashboard">{{ 'billing.go_tools' | t }}</a>
+        <a class="secondary" routerLink="/account">{{ 'nav.account' | t }}</a>
       </div>
     } @else {
-      <p class="eyebrow">UNLOCK MARTONTOOLBOX</p>
-      <h1>One-time payment, lifetime access</h1>
-      <p class="lead">A single one-time payment unlocks every tool for your account, for good.</p>
+      <p class="eyebrow">{{ 'billing.unlock' | t }}</p>
+      <h1>{{ 'billing.buy_title' | t }}</h1>
+      <p class="lead">{{ 'billing.buy_lead' | t }}</p>
       @if (error()) {
         <p class="error-text">{{ error() }}</p>
       }
-      <button class="primary" (click)="startCheckout()" [disabled]="loading()">{{ loading() ? 'Opening payment…' : 'Pay now' }}</button>
+      <button class="primary" (click)="startCheckout()" [disabled]="loading()">
+        {{ loading() ? ('billing.opening' | t) : ('billing.pay' | t) }}
+      </button>
     }
   }
 </section>

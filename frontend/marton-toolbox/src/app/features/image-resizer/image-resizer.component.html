@@ -1,41 +1,41 @@
 <section class="page tool-page">
-  <p class="eyebrow">IMAGE TOOLS</p>
-  <h1>Image Resizer</h1>
-  <p class="lead">Resize JPG, PNG, and WebP images without sending them anywhere.</p>
+  <p class="eyebrow">{{ 'tools.image_tools' | t }}</p>
+  <h1>{{ 'tool.image-resizer' | t }}</h1>
+  <p class="lead">{{ 'img.lead' | t }}</p>
   <div class="resizer">
     <div class="controls">
       <label class="drop-zone compact">
         <input type="file" accept="image/jpeg,image/png,image/webp" multiple (change)="load($event)" />
         <span class="drop-icon">⇧</span>
-        <strong>Add images</strong>
-        <small>Batch uploads supported.</small>
+        <strong>{{ 'img.add' | t }}</strong>
+        <small>{{ 'img.batch' | t }}</small>
       </label>
-      <h3>Dimensions</h3>
+      <h3>{{ 'img.dimensions' | t }}</h3>
       <div class="input-pair">
         <label>
-          Width
+          {{ 'img.width' | t }}
           <input type="number" [value]="width()" (input)="changeWidth(+$any($event.target).value)" />
         </label>
         <label>
-          Height
+          {{ 'img.height' | t }}
           <input type="number" [value]="height()" (input)="changeHeight(+$any($event.target).value)" />
         </label>
       </div>
       <label class="check">
         <input type="checkbox" [checked]="locked()" (change)="locked.set($any($event.target).checked)" />
-        Keep aspect ratio
+        {{ 'img.keep_ratio' | t }}
       </label>
       <label>
-        Preset
+        {{ 'img.preset' | t }}
         <select (change)="preset($any($event.target).value)">
-          <option value="">Custom dimensions</option>
+          <option value="">{{ 'img.custom' | t }}</option>
           @for (p of presetEntries; track p[0]) {
             <option [value]="p[0]">{{ p[0] }} — {{ p[1][0] }} × {{ p[1][1] }}</option>
           }
         </select>
       </label>
       <button class="primary" [disabled]="!files().length" (click)="download()">
-        Download {{ files().length || '' }} resized {{ files().length === 1 ? 'image' : 'images' }} ↓
+        {{ files().length ? ('img.download' | tn: files().length) : ('img.download_none' | t) }}
       </button>
     </div>
     <div class="resize-preview">
@@ -48,15 +48,15 @@
                 <strong>{{ file.file.name }}</strong>
                 <span>{{ file.width }} × {{ file.height }} → {{ width() }} × {{ height() }}</span>
               </div>
-              <button (click)="remove(file)">×</button>
+              <button (click)="remove(file)" [title]="'tools.remove' | t">×</button>
             </article>
           }
         </div>
       } @else {
         <div class="empty-preview">
-          Upload one or more images
+          {{ 'img.empty' | t }}
           <br />
-          to start resizing.
+          {{ 'img.empty2' | t }}
         </div>
       }
     </div>

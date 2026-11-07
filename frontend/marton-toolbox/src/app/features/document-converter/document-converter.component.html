@@ -1,15 +1,15 @@
 <section class="page tool-page">
-  <p class="eyebrow">FILE TOOLS</p>
-  <h1>Document Converter</h1>
-  <p class="lead">Convert PDF to Word, or Word, Excel, and PowerPoint files to PDF.</p>
+  <p class="eyebrow">{{ 'tools.file_tools' | t }}</p>
+  <h1>{{ 'tool.document-converter' | t }}</h1>
+  <p class="lead">{{ 'doc.lead' | t }}</p>
 
   <div class="resizer">
     <div class="controls">
       <label class="drop-zone compact">
         <input type="file" [accept]="accept" (change)="choose($event)" />
         <span class="drop-icon">⇧</span>
-        <strong>{{ file()?.name || 'Choose a document' }}</strong>
-        <small>PDF, DOC/DOCX, XLS/XLSX, PPT/PPTX, ODT, RTF · up to 25 MB</small>
+        <strong>{{ file()?.name || ('doc.choose' | t) }}</strong>
+        <small>{{ 'doc.formats' | t }}</small>
       </label>
       @if (conversion(); as c) {
         <div class="direction">
@@ -22,31 +22,31 @@
         <p class="error-text">{{ error() }}</p>
       }
       @if (doneName()) {
-        <p class="done">✓ Downloaded {{ doneName() }}</p>
+        <p class="done">{{ 'doc.downloaded' | t: { name: doneName() } }}</p>
       }
       <button class="primary" [disabled]="!conversion() || busy()" (click)="convert()">
-        {{ busy() ? 'Converting…' : 'Convert & download ↓' }}
+        {{ busy() ? ('doc.converting' | t) : ('doc.convert' | t) }}
       </button>
       <p class="hint">
-        Unlike the other tools, conversion runs on our server. Your file is deleted right after it's converted and is never stored.
+        {{ 'doc.server_hint' | t }}
       </p>
     </div>
     <div class="resize-preview">
       <div class="empty-preview">
         @if (busy()) {
-          Converting {{ file()?.name }}…
+          {{ 'doc.converting_file' | t: { name: file()?.name ?? '' } }}
           <br />
-          Large documents can take up to a minute.
+          {{ 'doc.large' | t }}
         } @else if (extension() === 'pdf') {
-          PDF → Word keeps text, paragraphs, and images.
+          {{ 'doc.pdf_keeps' | t }}
           <br />
-          Complex layouts may need a little touch-up.
+          {{ 'doc.touch_up' | t }}
         } @else if (file()) {
-          Ready to convert to {{ conversion()?.label }}.
+          {{ 'doc.ready' | t: { target: conversion()?.label ?? '' } }}
         } @else {
-          Choose a document
+          {{ 'doc.choose' | t }}
           <br />
-          to convert it.
+          {{ 'doc.to_convert' | t }}
         }
       </div>
     </div>

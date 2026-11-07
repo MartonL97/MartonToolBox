@@ -3,18 +3,20 @@ import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } fro
 import { AuthService } from './core/auth/auth.service';
 import { CartService } from './core/shop/cart.service';
 import { IconComponent } from './core/ui/icon.component';
+import { LangSwitchComponent } from './core/i18n/lang-switch.component';
+import { TranslatePipe } from './core/i18n/translate.pipe';
 
 const NAV = [
-  { path: '/tools/ai-assistant', label: 'AI Assistant', icon: 'sparkles' },
-  { path: '/tools/csv-cleaner', label: 'CSV Cleaner', icon: 'table' },
-  { path: '/tools/image-resizer', label: 'Image Resizer', icon: 'image' },
-  { path: '/tools/pdf-toolkit', label: 'PDF Toolkit', icon: 'file' },
-  { path: '/tools/document-converter', label: 'Document Converter', icon: 'convert' },
+  { path: '/tools/ai-assistant', label: 'tool.ai-assistant', icon: 'sparkles' },
+  { path: '/tools/csv-cleaner', label: 'tool.csv-cleaner', icon: 'table' },
+  { path: '/tools/image-resizer', label: 'tool.image-resizer', icon: 'image' },
+  { path: '/tools/pdf-toolkit', label: 'tool.pdf-toolkit', icon: 'file' },
+  { path: '/tools/document-converter', label: 'tool.document-converter', icon: 'convert' },
 ];
 
 @Component({
   selector: 'mtb-root',
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, IconComponent],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, IconComponent, LangSwitchComponent, TranslatePipe],
   templateUrl: './app.component.html',
   styleUrl: './app.component.scss',
 })

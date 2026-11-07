@@ -2,7 +2,9 @@
   @if (loading()) {
     <div class="status-banner">
       <span class="spinner"></span>
-      <div><h1>Loading your account…</h1></div>
+      <div>
+        <h1>{{ 'acct.loading' | t }}</h1>
+      </div>
     </div>
   }
   @if (loadError()) {
@@ -13,15 +15,15 @@
     <div class="profile-head">
       <span class="big-avatar">{{ initial() }}</span>
       <div>
-        <p class="eyebrow">Your account</p>
+        <p class="eyebrow">{{ 'acct.eyebrow' | t }}</p>
         <h1>{{ a.profile.displayName }}</h1>
-        <p>{{ a.profile.email }} · Member since {{ a.profile.memberSince | date: 'MMMM y' }}</p>
+        <p>{{ a.profile.email }} · {{ 'acct.member_since' | t: { date: (a.profile.memberSince | ldate: 'MMMM y') } }}</p>
         <div class="head-badges">
           <span class="status-pill" [attr.data-status]="a.license ? 'shipped' : 'pending'">
-            {{ a.license ? 'Lifetime license' : 'No license yet' }}
+            {{ a.license ? ('acct.lifetime' | t) : ('acct.no_license' | t) }}
           </span>
           @if (a.isAdmin) {
-            <span class="status-pill" data-status="paid">Admin</span>
+            <span class="status-pill" data-status="paid">{{ 'nav.admin' | t }}</span>
           }
         </div>
       </div>
@@ -32,24 +34,24 @@
         <div class="panel">
           <h3>
             <mtb-icon name="shield" />
-            Personal details
+            {{ 'acct.personal' | t }}
           </h3>
-          <p class="panel-sub">How we address you and reach you about orders.</p>
+          <p class="panel-sub">{{ 'acct.personal_sub' | t }}</p>
           <div class="form-grid">
             <label>
-              Full name
+              {{ 'cart.full_name' | t }}
               <input autocomplete="name" [value]="form().displayName" (input)="set('displayName', $event)" required />
             </label>
             <label>
               <span class="label-row">
-                Phone
-                <span class="optional">optional</span>
+                {{ 'cart.phone' | t }}
+                <span class="optional">{{ 'acct.optional' | t }}</span>
               </span>
               <input type="tel" autocomplete="tel" placeholder="07xx xxx xxx" [value]="form().phone" (input)="set('phone', $event)" />
             </label>
             <label class="span-2">
-              Email
-              <input class="readonly" [value]="a.profile.email" readonly title="Your email is your login and can't be changed here." />
+              {{ 'auth.email' | t }}
+              <input class="readonly" [value]="a.profile.email" readonly [title]="'acct.email_locked' | t" />
             </label>
           </div>
         </div>
@@ -57,40 +59,40 @@
         <div class="panel">
           <h3>
             <mtb-icon name="truck" />
-            Address
+            {{ 'acct.address' | t }}
           </h3>
-          <p class="panel-sub">Used to pre-fill the shipping form when you order products.</p>
+          <p class="panel-sub">{{ 'acct.address_sub' | t }}</p>
           <div class="form-grid">
             <label class="span-2">
               <span class="label-row">
-                Street address
-                <span class="optional">optional</span>
+                {{ 'cart.street' | t }}
+                <span class="optional">{{ 'acct.optional' | t }}</span>
               </span>
               <input
                 autocomplete="street-address"
-                placeholder="Street, number, building, apartment"
+                [placeholder]="'cart.street_hint' | t"
                 [value]="form().address"
                 (input)="set('address', $event)"
               />
             </label>
             <label>
               <span class="label-row">
-                City
-                <span class="optional">optional</span>
+                {{ 'cart.city' | t }}
+                <span class="optional">{{ 'acct.optional' | t }}</span>
               </span>
               <input autocomplete="address-level2" [value]="form().city" (input)="set('city', $event)" />
             </label>
             <label>
               <span class="label-row">
-                County (județ)
-                <span class="optional">optional</span>
+                {{ 'cart.county' | t }}
+                <span class="optional">{{ 'acct.optional' | t }}</span>
               </span>
               <input autocomplete="address-level1" [value]="form().county" (input)="set('county', $event)" />
             </label>
             <label>
               <span class="label-row">
-                Postal code
-                <span class="optional">optional</span>
+                {{ 'cart.postal_code' | t }}
+                <span class="optional">{{ 'acct.optional' | t }}</span>
               </span>
               <input autocomplete="postal-code" [value]="form().postalCode" (input)="set('postalCode', $event)" />
             </label>
@@ -100,18 +102,18 @@
         <div class="panel">
           <h3>
             <mtb-icon name="card" />
-            Company
-            <span class="optional">optional, for invoices</span>
+            {{ 'acct.company' | t }}
+            <span class="optional">{{ 'acct.company_optional' | t }}</span>
           </h3>
-          <p class="panel-sub">Fill this in if you buy on behalf of a company.</p>
+          <p class="panel-sub">{{ 'acct.company_sub' | t }}</p>
           <div class="form-grid">
             <label>
-              Company name
+              {{ 'acct.company_name' | t }}
               <input autocomplete="organization" [value]="form().companyName" (input)="set('companyName', $event)" />
             </label>
             <label>
-              CUI / VAT number
-              <input placeholder="e.g. RO12345678" [value]="form().taxId" (input)="set('taxId', $event)" />
+              {{ 'acct.tax_id' | t }}
+              <input [placeholder]="'acct.tax_hint' | t" [value]="form().taxId" (input)="set('taxId', $event)" />
             </label>
           </div>
         </div>
@@ -121,67 +123,69 @@
         }
         <div class="save-bar">
           <button class="primary" type="submit" [disabled]="saving() || !dirty() || form().displayName.trim().length < 2">
-            {{ saving() ? 'Saving…' : 'Save changes' }}
+            {{ saving() ? ('acct.saving' | t) : ('acct.save' | t) }}
           </button>
           @if (saved() && !dirty()) {
             <span class="saved">
               <mtb-icon name="check" />
-              Saved
+              {{ 'acct.saved' | t }}
             </span>
           } @else if (dirty()) {
-            <span class="hint">You have unsaved changes.</span>
+            <span class="hint">{{ 'acct.unsaved' | t }}</span>
           }
         </div>
       </form>
 
       <div class="side">
         <div class="panel">
-          <h3>Profile {{ completeness() }}% complete</h3>
+          <h3>{{ 'acct.complete' | t: { n: completeness() } }}</h3>
           <div class="progress"><span [style.width.%]="completeness()"></span></div>
           @if (missing().length) {
-            <p class="panel-sub" style="margin: 0">Still missing:</p>
+            <p class="panel-sub" style="margin: 0">{{ 'acct.missing' | t }}</p>
             <ul class="missing">
               @for (m of missing(); track m) {
                 <li>{{ m }}</li>
               }
             </ul>
           } @else {
-            <p class="panel-sub" style="margin: 0">All set — checkout will be pre-filled.</p>
+            <p class="panel-sub" style="margin: 0">{{ 'acct.all_set' | t }}</p>
           }
         </div>
 
         <div class="panel">
           <h3>
             <mtb-icon name="bolt" />
-            License
+            {{ 'acct.license' | t }}
           </h3>
           @if (a.license) {
-            <p class="panel-sub" style="margin: 0">{{ a.license.product }} · {{ a.license.status }}</p>
+            <p class="panel-sub" style="margin: 0">
+              {{ a.license.product }} · {{ i18n.tOr('license.status.' + a.license.status, a.license.status) }}
+            </p>
             <p class="license-key">{{ a.license.licenseKey }}</p>
           } @else {
-            <p class="panel-sub">Unlock every tool with a one-time payment.</p>
-            <a class="primary block" routerLink="/billing">Unlock all tools</a>
+            <p class="panel-sub">{{ 'acct.unlock_text' | t }}</p>
+            <a class="primary block" routerLink="/billing">{{ 'acct.unlock' | t }}</a>
           }
         </div>
 
         <div class="panel links">
           <a routerLink="/shop/orders">
             <mtb-icon name="package" />
-            My orders
+            {{ 'nav.orders' | t }}
           </a>
           <a routerLink="/shop">
             <mtb-icon name="bag" />
-            Products
+            {{ 'nav.products' | t }}
           </a>
           @if (a.isAdmin) {
             <a routerLink="/admin">
               <mtb-icon name="shield" />
-              Store admin
+              {{ 'nav.store_admin' | t }}
             </a>
           }
           <button class="secondary logout" style="margin-top: 8px" (click)="logout()">
             <mtb-icon name="login" />
-            Log out
+            {{ 'nav.logout' | t }}
           </button>
         </div>
       </div>

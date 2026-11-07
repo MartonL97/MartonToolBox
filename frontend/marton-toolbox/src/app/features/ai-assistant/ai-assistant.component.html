@@ -1,14 +1,14 @@
 <section class="page tool-page">
   <div class="ai-header">
     <div>
-      <p class="eyebrow">AI TOOLS</p>
-      <h1>AI Assistant</h1>
-      <p class="lead">Ask questions, draft emails, summarize text, or get help with your files. It runs on our own server, so your chats stay private.</p>
+      <p class="eyebrow">{{ 'ai.eyebrow' | t }}</p>
+      <h1>{{ 'tool.ai-assistant' | t }}</h1>
+      <p class="lead">{{ 'ai.lead' | t }}</p>
     </div>
     @if (messages().length) {
       <button type="button" class="secondary new-chat" (click)="newChat()">
         <mtb-icon name="plus" />
-        New chat
+        {{ 'ai.new_chat' | t }}
       </button>
     }
   </div>
@@ -20,7 +20,7 @@
       }
       <span>{{ n.text }}</span>
       @if (pendingOrder()) {
-        <button type="button" class="link-button" (click)="checkPackAgain()">Check again</button>
+        <button type="button" class="link-button" (click)="checkPackAgain()">{{ 'common.check_again' | t }}</button>
       }
     </div>
   }
@@ -28,37 +28,39 @@
   @if (usage(); as u) {
     <div class="ai-usage" [class.warn]="level() === 'warn'" [class.full]="level() === 'full'">
       <div class="usage-top">
-        <span class="plan-badge">{{ u.quota.planName }} pack</span>
+        <span class="plan-badge">{{ 'ai.pack_badge' | t: { plan: u.quota.planName } }}</span>
         <span class="usage-count">
-          <strong>{{ percent() }}%</strong> used
-          <span class="usage-window">in the last 24 hours</span>
+          <strong>{{ percent() }}%</strong>
+          {{ 'ai.used' | t }}
+          <span class="usage-window">{{ 'ai.window' | t }}</span>
         </span>
         <button type="button" class="link-button more-packs" (click)="togglePacks()" [attr.aria-expanded]="showPacks()">
-          {{ showPacks() ? 'Hide packs' : 'Get more messages' }}
+          {{ showPacks() ? ('ai.hide_packs' | t) : ('ai.get_more' | t) }}
         </button>
       </div>
       <div
         class="usage-bar"
         role="progressbar"
-        aria-label="AI allowance used in the last 24 hours"
+        [attr.aria-label]="'ai.bar_label' | t"
         aria-valuemin="0"
         aria-valuemax="100"
         [attr.aria-valuenow]="percent()"
-        [attr.aria-valuetext]="percent() + '% used'"
+        [attr.aria-valuetext]="'ai.bar_value' | t: { n: percent() }"
       >
         <span [style.width.%]="percent()"></span>
       </div>
       <p class="usage-note">
         @if (limitReached()) {
-          <strong>Limit reached.</strong> You can chat again in {{ nextFreeIn() }}, or get a bigger pack.
+          <strong>{{ 'ai.limit_reached' | t }}</strong>
+          {{ 'ai.chat_again' | t: { time: nextFreeIn() } }}
         } @else {
-          {{ 100 - percent() }}% left. Longer messages and replies use more.
+          {{ 'ai.left' | t: { n: 100 - percent() } }}
           @if (level() === 'warn' && u.quota.nextFreeAt) {
-            Some frees up in {{ nextFreeIn() }}.
+            {{ 'ai.frees_up' | t: { time: nextFreeIn() } }}
           }
         }
         @if (planUntil()) {
-          <span class="plan-until">{{ u.quota.planName }} until {{ planUntil() }}.</span>
+          <span class="plan-until">{{ 'ai.plan_until' | t: { plan: u.quota.planName, date: planUntil() } }}</span>
         }
       </p>
 
@@ -69,23 +71,26 @@
               <div class="pack-head">
                 <h3>{{ p.name }}</h3>
                 @if (u.quota.plan === p.id) {
-                  <span class="pack-current">Current</span>
+                  <span class="pack-current">{{ 'ai.current' | t }}</span>
                 }
               </div>
-              <p class="pack-limit"><strong>{{ p.timesBasic }}×</strong> the Basic allowance</p>
-              <p class="pack-meta">Every 24 hours, for {{ p.days }} days</p>
+              <p class="pack-limit">
+                <strong>{{ p.timesBasic }}×</strong>
+                {{ 'ai.times_basic' | t }}
+              </p>
+              <p class="pack-meta">{{ 'ai.every_24h' | t: { days: p.days } }}</p>
               <button type="button" class="primary pack-buy" [disabled]="!!buying()" (click)="buy(p)">
                 @if (buying() === p.id) {
-                  Opening payment…
+                  {{ 'ai.opening_payment' | t }}
                 } @else if (u.quota.plan === p.id) {
-                  Add {{ p.days }} days · {{ money(p.price, p.currency) }}
+                  {{ 'ai.add_days' | t: { days: p.days, price: money(p.price, p.currency) } }}
                 } @else {
-                  Buy · {{ money(p.price, p.currency) }}
+                  {{ 'ai.buy' | t: { price: money(p.price, p.currency) } }}
                 }
               </button>
             </div>
           }
-          <p class="packs-note">One-time payment through PayU, no subscription. Buying the pack you already have adds its days after the current ones.</p>
+          <p class="packs-note">{{ 'ai.packs_note' | t }}</p>
         </div>
       }
     </div>
@@ -94,9 +99,9 @@
   @if (status(); as s) {
     @if (!s.available) {
       <div class="ai-unavailable" role="status">
-        <strong>The AI model is offline.</strong>
-        <span>{{ s.problem }}</span>
-        <button type="button" class="link-button" (click)="checkStatus()">Check again</button>
+        <strong>{{ 'ai.offline' | t }}</strong>
+        <span>{{ i18n.server(s.problem) }}</span>
+        <button type="button" class="link-button" (click)="checkStatus()">{{ 'common.check_again' | t }}</button>
       </div>
     }
   }
@@ -113,8 +118,10 @@
               {{ m.content }}
             } @else if (last && streaming()) {
               <span class="typing">
-                <i></i><i></i><i></i>
-                <em>Thinking…</em>
+                <i></i>
+                <i></i>
+                <i></i>
+                <em>{{ 'ai.thinking' | t }}</em>
               </span>
             }
           </div>
@@ -122,11 +129,11 @@
       } @empty {
         <div class="chat-empty">
           <span class="chat-empty-icon"><mtb-icon name="sparkles" /></span>
-          <h2>How can I help?</h2>
-          <p>Try one of these, or write your own question below.</p>
+          <h2>{{ 'ai.empty_title' | t }}</h2>
+          <p>{{ 'ai.empty_text' | t }}</p>
           <div class="suggestions">
             @for (s of suggestions; track s) {
-              <button type="button" class="suggestion" (click)="useSuggestion(s)">{{ s }}</button>
+              <button type="button" class="suggestion" (click)="useSuggestion(i18n.t(s))">{{ s | t }}</button>
             }
           </div>
         </div>
@@ -145,24 +152,30 @@
         (input)="draft.set($any($event.target).value)"
         (keydown)="onKeydown($event)"
         [attr.maxlength]="maxChars"
-        [placeholder]="limitReached() ? 'Daily AI limit reached. Get more messages above.' : 'Message the AI assistant…'"
-        aria-label="Message"
+        [placeholder]="limitReached() ? ('ai.placeholder_limit' | t) : ('ai.placeholder' | t)"
+        [attr.aria-label]="'ai.message' | t"
       ></textarea>
       @if (streaming()) {
-        <button type="button" class="secondary send" (click)="stop()" title="Stop">Stop</button>
+        <button type="button" class="secondary send" (click)="stop()" [title]="'ai.stop' | t">{{ 'ai.stop' | t }}</button>
       } @else {
-        <button type="button" class="primary send" [disabled]="!draft().trim() || limitReached()" (click)="send()" title="Send (Enter)">
+        <button
+          type="button"
+          class="primary send"
+          [disabled]="!draft().trim() || limitReached()"
+          (click)="send()"
+          [title]="'ai.send_title' | t"
+        >
           <mtb-icon name="arrow" />
-          Send
+          {{ 'ai.send' | t }}
         </button>
       }
     </div>
     <p class="hint">
-      Enter to send · Shift+Enter for a new line
+      {{ 'ai.hint' | t }}
       @if (status()?.model) {
-        · Model: {{ status()?.model }}
+        {{ 'ai.model' | t: { model: status()?.model ?? '' } }}
       }
-      · AI answers can be wrong, so check important facts.
+      {{ 'ai.hint_wrong' | t }}
     </p>
   </div>
 </section>

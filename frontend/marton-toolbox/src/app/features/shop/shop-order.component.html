@@ -1,17 +1,17 @@
 <section class="page">
-  <p class="eyebrow">Order {{ shortId() }}</p>
+  <p class="eyebrow">{{ 'common.order_id' | t: { id: shortId() } }}</p>
   @if (order(); as o) {
     @if (o.status === 'Paid') {
       <div class="status-banner success">
         <mtb-icon name="check" />
         <div>
-          <h1>Thank you for your order!</h1>
+          <h1>{{ 'order.thanks' | t }}</h1>
           <p class="lead">
-            Payment received.
+            {{ 'order.paid' | t }}
             @if (o.shippedAt) {
-              Your order has shipped.
+              {{ 'order.shipped' | t }}
             } @else {
-              We'll pack it and ship it soon.
+              {{ 'order.will_ship' | t }}
             }
           </p>
         </div>
@@ -20,32 +20,32 @@
       <div class="status-banner error">
         <mtb-icon name="cart" />
         <div>
-          <h1>Payment not completed</h1>
-          <p class="lead">You haven't been charged. Your cart is still saved.</p>
+          <h1>{{ 'order.failed_title' | t }}</h1>
+          <p class="lead">{{ 'order.failed_text' | t }}</p>
         </div>
       </div>
     } @else if (o.status === 'CancelRequested') {
       <div class="status-banner">
         <mtb-icon name="package" />
         <div>
-          <h1>Waiting for cancellation</h1>
-          <p class="lead">We've received your request. You haven't been charged, and the order will be removed once we cancel it.</p>
+          <h1>{{ 'order.cancel_req_title' | t }}</h1>
+          <p class="lead">{{ 'order.cancel_req_text' | t }}</p>
         </div>
       </div>
     } @else if (o.status === 'Cancelled') {
       <div class="status-banner error">
         <mtb-icon name="cart" />
         <div>
-          <h1>Order cancelled</h1>
-          <p class="lead">This order was cancelled and you haven't been charged.</p>
+          <h1>{{ 'order.cancelled_title' | t }}</h1>
+          <p class="lead">{{ 'order.cancelled_text' | t }}</p>
         </div>
       </div>
     } @else {
       <div class="status-banner">
         <span class="spinner"></span>
         <div>
-          <h1>{{ timedOut() ? 'Still waiting for PayU' : 'Confirming your payment…' }}</h1>
-          <p class="lead">This usually takes a few seconds.</p>
+          <h1>{{ timedOut() ? ('order.still_waiting' | t) : ('order.confirming' | t) }}</h1>
+          <p class="lead">{{ 'order.few_seconds' | t }}</p>
         </div>
       </div>
     }
@@ -56,42 +56,42 @@
           <span>
             {{ item.quantity }} × {{ item.productName }}
             @if (item.size) {
-              · size {{ item.size }}
+              {{ 'order.item_size' | t: { size: item.size } }}
             }
           </span>
           <span>{{ money(item.unitPrice * item.quantity, o.currency) }}</span>
         </div>
       }
       <div class="summary-row">
-        <span>Shipping</span>
-        <span>{{ o.shippingCost === 0 ? 'Free' : money(o.shippingCost, o.currency) }}</span>
+        <span>{{ 'common.shipping' | t }}</span>
+        <span>{{ o.shippingCost === 0 ? ('common.free' | t) : money(o.shippingCost, o.currency) }}</span>
       </div>
       <div class="summary-row total">
-        <span>Total</span>
+        <span>{{ 'common.total' | t }}</span>
         <span>{{ money(o.amount, o.currency) }}</span>
       </div>
     </div>
 
     <div class="actions">
       @if (o.status === 'Failed') {
-        <a class="primary" routerLink="/shop/cart">Back to cart</a>
+        <a class="primary" routerLink="/shop/cart">{{ 'order.back_to_cart' | t }}</a>
       }
       @if (o.status === 'Pending' && timedOut()) {
-        <button class="primary" (click)="retry()">Check again</button>
+        <button class="primary" (click)="retry()">{{ 'common.check_again' | t }}</button>
       }
       @if (o.status === 'Pending') {
         @if (confirmCancel()) {
-          <span class="cancel-confirm">Cancel this order?</span>
+          <span class="cancel-confirm">{{ 'order.cancel_q' | t }}</span>
           <button class="danger" (click)="requestCancel()" [disabled]="cancelling()">
-            {{ cancelling() ? 'Sending…' : 'Yes, cancel order' }}
+            {{ cancelling() ? ('order.sending' | t) : ('order.yes_cancel' | t) }}
           </button>
-          <button class="secondary" (click)="confirmCancel.set(false)">Keep order</button>
+          <button class="secondary" (click)="confirmCancel.set(false)">{{ 'order.keep' | t }}</button>
         } @else {
-          <button class="secondary" (click)="confirmCancel.set(true)">Cancel order</button>
+          <button class="secondary" (click)="confirmCancel.set(true)">{{ 'order.cancel' | t }}</button>
         }
       }
-      <a class="secondary" routerLink="/shop/orders">My orders</a>
-      <a class="secondary" routerLink="/shop">Continue shopping</a>
+      <a class="secondary" routerLink="/shop/orders">{{ 'nav.orders' | t }}</a>
+      <a class="secondary" routerLink="/shop">{{ 'order.continue' | t }}</a>
     </div>
     @if (error()) {
       <p class="error-text">{{ error() }}</p>
@@ -101,7 +101,9 @@
   } @else {
     <div class="status-banner">
       <span class="spinner"></span>
-      <div><h1>Loading your order…</h1></div>
+      <div>
+        <h1>{{ 'order.loading' | t }}</h1>
+      </div>
     </div>
   }
 </section>

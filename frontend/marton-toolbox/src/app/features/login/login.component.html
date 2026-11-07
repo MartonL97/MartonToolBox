@@ -1,20 +1,20 @@
 <section class="page auth-page">
   <div class="auth-card">
-    <p class="eyebrow">WELCOME BACK</p>
-    <h1>Log in</h1>
-    <p class="lead">Access your account and license.</p>
+    <p class="eyebrow">{{ 'login.eyebrow' | t }}</p>
+    <h1>{{ 'auth.log_in' | t }}</h1>
+    <p class="lead">{{ 'login.lead' | t }}</p>
     @if (sessionExpired()) {
-      <p class="error-text">Your session expired. Please log in again.</p>
+      <p class="error-text">{{ 'login.expired' | t }}</p>
     }
     <form (submit)="submit($event)">
       <label>
-        Email
+        {{ 'auth.email' | t }}
         <input type="email" [value]="email()" (input)="email.set($any($event.target).value)" required />
       </label>
       <label>
         <span class="label-split">
-          Password
-          <a routerLink="/forgot-password" [queryParams]="email() ? { email: email() } : {}">Forgot password?</a>
+          {{ 'auth.password' | t }}
+          <a routerLink="/forgot-password" [queryParams]="email() ? { email: email() } : {}">{{ 'login.forgot' | t }}</a>
         </span>
         <input type="password" [value]="password()" (input)="password.set($any($event.target).value)" required />
       </label>
@@ -22,18 +22,18 @@
         <p class="error-text">{{ error() }}</p>
       }
       @if (lockedOut()) {
-        <a class="secondary" routerLink="/forgot-password" [queryParams]="{ email: email() }">Reset password</a>
+        <a class="secondary" routerLink="/forgot-password" [queryParams]="{ email: email() }">{{ 'login.reset' | t }}</a>
       }
       @if (unconfirmed()) {
         <button class="secondary" type="button" (click)="resend()" [disabled]="resending() || resent()">
-          {{ resent() ? 'Sent — check your inbox' : resending() ? 'Sending…' : 'Resend confirmation email' }}
+          {{ resent() ? ('auth.sent' | t) : resending() ? ('auth.sending' | t) : ('auth.resend' | t) }}
         </button>
       }
-      <button class="primary" type="submit" [disabled]="loading()">{{ loading() ? 'Logging in…' : 'Log in' }}</button>
+      <button class="primary" type="submit" [disabled]="loading()">{{ loading() ? ('login.logging_in' | t) : ('auth.log_in' | t) }}</button>
     </form>
     <p class="auth-switch">
-      No account yet?
-      <a routerLink="/register" queryParamsHandling="preserve">Create one</a>
+      {{ 'login.no_account' | t }}
+      <a routerLink="/register" queryParamsHandling="preserve">{{ 'login.create' | t }}</a>
     </p>
   </div>
 </section>

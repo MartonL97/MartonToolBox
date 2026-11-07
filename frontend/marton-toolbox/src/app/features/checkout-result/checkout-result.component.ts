@@ -2,6 +2,7 @@ import { Component, OnDestroy, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
+import { I18N } from '../../core/i18n/translate.pipe';
 
 interface OrderConfirmation {
   state: 'Pending' | 'Completed' | 'Failed';
@@ -13,7 +14,7 @@ const MAX_ATTEMPTS = 10;
 
 @Component({
   standalone: true,
-  imports: [RouterLink],
+  imports: [RouterLink, ...I18N],
   styleUrl: './checkout-result.component.scss',
   templateUrl: './checkout-result.component.html',
 })

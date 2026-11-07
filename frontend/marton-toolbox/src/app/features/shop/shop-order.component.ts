@@ -4,6 +4,8 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { CartService, ShopOrder, money } from '../../core/shop/cart.service';
 import { IconComponent } from '../../core/ui/icon.component';
+import { I18nService } from '../../core/i18n/i18n.service';
+import { I18N } from '../../core/i18n/translate.pipe';
 
 const POLL_INTERVAL_MS = 3000;
 const MAX_ATTEMPTS = 10;
@@ -11,13 +13,14 @@ const MAX_ATTEMPTS = 10;
 /** PayU sends the buyer back here; we poll until PayU reports a final status. */
 @Component({
   standalone: true,
-  imports: [RouterLink, IconComponent],
+  imports: [RouterLink, IconComponent, ...I18N],
   templateUrl: './shop-order.component.html',
   styleUrl: './shop-order.component.scss',
 })
 export class ShopOrderComponent implements OnDestroy {
   private http = inject(HttpClient);
   private cart = inject(CartService);
+  private i18n = inject(I18nService);
   private orderId = inject(ActivatedRoute).snapshot.paramMap.get('id') ?? '';
   private timer?: ReturnType<typeof setTimeout>;
   order = signal<ShopOrder | null>(null);
@@ -42,7 +45,7 @@ export class ShopOrderComponent implements OnDestroy {
       this.order.set(res.data);
       this.confirmCancel.set(false);
     } catch (err) {
-      this.error.set((err as HttpErrorResponse).error?.error ?? "Couldn't request cancellation. Please try again.");
+      this.error.set(this.i18n.server((err as HttpErrorResponse).error?.error, 'order.cancel_failed'));
     } finally {
       this.cancelling.set(false);
     }
@@ -64,7 +67,7 @@ export class ShopOrderComponent implements OnDestroy {
       if (res.data.status !== 'Pending') return;
     } catch {
       if (!this.order()) {
-        this.error.set("We couldn't find this order.");
+        this.error.set(this.i18n.t('order.not_found'));
         return;
       }
     }

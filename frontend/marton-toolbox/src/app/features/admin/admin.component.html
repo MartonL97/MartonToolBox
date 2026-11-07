@@ -1,9 +1,9 @@
 <section class="page">
-  <p class="eyebrow">Admin</p>
-  <h1>Store admin</h1>
-  <p class="lead" style="margin-bottom: 22px">Manage products, ship orders, and manage who has a license.</p>
+  <p class="eyebrow">{{ 'nav.admin' | t }}</p>
+  <h1>{{ 'nav.store_admin' | t }}</h1>
+  <p class="lead" style="margin-bottom: 22px">{{ 'adm.lead' | t }}</p>
   @if (loading() && !loaded()) {
-    <p class="empty-preview">Loading…</p>
+    <p class="empty-preview">{{ 'adm.loading' | t }}</p>
   }
   @if (error()) {
     <p class="error-text">{{ error() }}</p>
@@ -12,13 +12,17 @@
   @if (loaded()) {
     <div class="tabs">
       <button [class.active]="tab() === 'orders'" (click)="tab.set('orders')">
-        Product orders ({{ shopOrders().length }}){{ cancelRequests() ? ' · ' + cancelRequests() + ' to cancel' : '' }}
+        {{ 'adm.tab_orders' | t: { n: shopOrders().length } }}{{ cancelRequests() ? ('adm.to_cancel' | t: { n: cancelRequests() }) : '' }}
       </button>
-      <button [class.active]="tab() === 'products'" (click)="tab.set('products')">Products ({{ products().length }})</button>
+      <button [class.active]="tab() === 'products'" (click)="tab.set('products')">
+        {{ 'adm.tab_products' | t: { n: products().length } }}
+      </button>
       <button [class.active]="tab() === 'inventory'" (click)="openInventory()">
-        Inventory{{ stockAlerts().length ? ' (' + stockAlerts().length + ' low)' : '' }}
+        {{ 'adm.tab_inventory' | t }}{{ stockAlerts().length ? ('adm.low_count' | t: { n: stockAlerts().length }) : '' }}
       </button>
-      <button [class.active]="tab() === 'licenses'" (click)="tab.set('licenses')">Active licenses ({{ licenses().length }})</button>
+      <button [class.active]="tab() === 'licenses'" (click)="tab.set('licenses')">
+        {{ 'adm.tab_licenses' | t: { n: licenses().length } }}
+      </button>
     </div>
 
     @if (tab() === 'orders') {
@@ -26,27 +30,29 @@
         @for (o of shopOrders(); track o.order.id) {
           <div class="panel admin-order">
             <div>
-              <strong>Order {{ short(o.order.id) }}</strong>
+              <strong>{{ 'common.order_id' | t: { id: short(o.order.id) } }}</strong>
               <span class="status-pill" [attr.data-status]="o.order.shippedAt ? 'shipped' : o.order.status.toLowerCase()">
-                {{ o.order.shippedAt ? 'Shipped' : statusLabels[o.order.status] }}
+                {{ 'order.status.' + (o.order.shippedAt ? 'Shipped' : o.order.status) | t }}
               </span>
-              <p class="muted">{{ o.order.createdAt | date: 'd MMM y, HH:mm' }} · {{ o.userEmail }}</p>
+              <p class="muted">{{ o.order.createdAt | ldate: 'd MMM y, HH:mm' }} · {{ o.userEmail }}</p>
               @for (i of o.order.items; track $index) {
                 <p>
                   {{ i.quantity }} × {{ i.productName }}
                   @if (i.size) {
                     —
-                    <strong>size {{ i.size }}</strong>
+                    <strong>{{ 'adm.size_n' | t: { size: i.size } }}</strong>
                   }
                 </p>
               }
               <p>
                 <strong>{{ money(o.order.amount, o.order.currency) }}</strong>
-                <span class="muted" style="margin-left: 6px">(shipping {{ money(o.order.shippingCost, o.order.currency) }})</span>
+                <span class="muted" style="margin-left: 6px">
+                  {{ 'adm.shipping_cost' | t: { amount: money(o.order.shippingCost, o.order.currency) } }}
+                </span>
               </p>
             </div>
             <div>
-              <strong>Ship to</strong>
+              <strong>{{ 'adm.ship_to' | t }}</strong>
               <p>
                 {{ o.shippingName }} · {{ o.shippingPhone }}
                 <br />
@@ -58,94 +64,97 @@
             <div>
               @if (o.order.status === 'Paid' && !o.order.shippedAt) {
                 <button class="primary" (click)="ship(o)" [disabled]="busy() === o.order.id">
-                  {{ busy() === o.order.id ? 'Saving…' : 'Mark as shipped' }}
+                  {{ busy() === o.order.id ? ('adm.saving' | t) : ('adm.mark_shipped' | t) }}
                 </button>
               } @else if (o.order.shippedAt) {
-                <span class="muted">Shipped {{ o.order.shippedAt | date: 'd MMM y' }}</span>
+                <span class="muted">{{ 'adm.shipped_on' | t: { date: (o.order.shippedAt | ldate: 'd MMM y') } }}</span>
               } @else if (o.order.status === 'Pending' || o.order.status === 'CancelRequested') {
-                <span class="muted">{{ o.order.status === 'Pending' ? 'Waiting for payment' : 'Customer asked to cancel' }}</span>
+                <span class="muted">{{ o.order.status === 'Pending' ? ('adm.waiting_payment' | t) : ('adm.asked_cancel' | t) }}</span>
                 <div class="row-buttons">
                   @if (confirmCancel() === o.order.id) {
-                    <span class="muted">Cancel order {{ short(o.order.id) }}?</span>
+                    <span class="muted">{{ 'adm.cancel_q' | t: { id: short(o.order.id) } }}</span>
                     <button class="danger" (click)="cancelOrder(o)" [disabled]="busy() === o.order.id">
-                      {{ busy() === o.order.id ? 'Cancelling…' : 'Yes, cancel' }}
+                      {{ busy() === o.order.id ? ('adm.cancelling' | t) : ('adm.yes_cancel' | t) }}
                     </button>
-                    <button class="secondary" (click)="confirmCancel.set(null)">Keep</button>
+                    <button class="secondary" (click)="confirmCancel.set(null)">{{ 'adm.keep' | t }}</button>
                   } @else {
-                    <button [class]="o.order.status === 'CancelRequested' ? 'primary' : 'secondary'" (click)="confirmCancel.set(o.order.id)">
-                      {{ o.order.status === 'CancelRequested' ? 'Approve cancellation' : 'Cancel order' }}
+                    <button
+                      [class]="o.order.status === 'CancelRequested' ? 'primary' : 'secondary'"
+                      (click)="confirmCancel.set(o.order.id)"
+                    >
+                      {{ o.order.status === 'CancelRequested' ? ('adm.approve_cancel' | t) : ('adm.cancel_order' | t) }}
                     </button>
                   }
                 </div>
               } @else {
-                <span class="muted">{{ statusLabels[o.order.status] }}</span>
+                <span class="muted">{{ 'order.status.' + o.order.status | t }}</span>
               }
               <div class="row-buttons">
                 @if (confirmDelete() === o.order.id) {
-                  <span class="muted">Delete order {{ short(o.order.id) }}?</span>
+                  <span class="muted">{{ 'adm.delete_order_q' | t: { id: short(o.order.id) } }}</span>
                   <button class="danger" (click)="deleteOrder(o)" [disabled]="busy() === o.order.id">
-                    {{ busy() === o.order.id ? 'Deleting…' : 'Yes, delete' }}
+                    {{ busy() === o.order.id ? ('adm.deleting' | t) : ('adm.yes_delete' | t) }}
                   </button>
-                  <button class="secondary" (click)="confirmDelete.set(null)">Cancel</button>
+                  <button class="secondary" (click)="confirmDelete.set(null)">{{ 'adm.cancel' | t }}</button>
                 } @else {
-                  <button class="secondary danger-text" (click)="confirmDelete.set(o.order.id)">Delete order</button>
+                  <button class="secondary danger-text" (click)="confirmDelete.set(o.order.id)">{{ 'adm.delete_order' | t }}</button>
                 }
               </div>
             </div>
           </div>
         } @empty {
-          <p class="empty-preview">No product orders yet.</p>
+          <p class="empty-preview">{{ 'adm.no_orders' | t }}</p>
         }
       </div>
     }
 
     @if (tab() === 'products') {
       <form class="panel admin-form" (submit)="saveProduct($event)">
-        <h3 class="span-2">{{ form().id ? 'Edit product' : 'New product' }}</h3>
+        <h3 class="span-2">{{ form().id ? ('adm.edit_product' | t) : ('adm.new_product' | t) }}</h3>
         <label>
-          Name
+          {{ 'adm.name' | t }}
           <input [value]="form().name" (input)="setForm('name', $event)" required />
         </label>
         <label>
-          Slug (URL id)
-          <input [value]="form().slug" (input)="setForm('slug', $event)" placeholder="e.g. coffee-mug" required />
+          {{ 'adm.slug' | t }}
+          <input [value]="form().slug" (input)="setForm('slug', $event)" [placeholder]="'adm.slug_hint' | t" required />
         </label>
         <label class="span-2">
-          Description
+          {{ 'adm.description' | t }}
           <textarea rows="2" [value]="form().description" (input)="setForm('description', $event)"></textarea>
         </label>
         <label>
-          Price (RON)
+          {{ 'adm.price' | t }}
           <input type="number" min="0.01" step="0.01" [value]="form().price" (input)="setForm('price', $event)" required />
         </label>
         <label>
-          Sizes &amp; stock
-          <input [value]="form().sizesText" (input)="setForm('sizesText', $event)" placeholder="e.g. S:20, M:20, L:20 (empty = no sizes)" />
+          {{ 'adm.sizes' | t }}
+          <input [value]="form().sizesText" (input)="setForm('sizesText', $event)" [placeholder]="'adm.sizes_hint' | t" />
         </label>
         @if (!form().sizesText.trim()) {
           <label>
-            Stock
+            {{ 'adm.stock' | t }}
             <input type="number" min="0" step="1" [value]="form().stock" (input)="setForm('stock', $event)" required />
           </label>
         }
         <label>
-          Image (optional)
-          <input [value]="form().imageUrl" (input)="setForm('imageUrl', $event)" placeholder="https://… or /images/shop/photo.jpg" />
+          {{ 'adm.image' | t }}
+          <input [value]="form().imageUrl" (input)="setForm('imageUrl', $event)" [placeholder]="'adm.image_hint' | t" />
         </label>
         <label>
-          Sort order
+          {{ 'adm.sort' | t }}
           <input type="number" step="1" [value]="form().sortOrder" (input)="setForm('sortOrder', $event)" />
         </label>
         <label class="inline">
           <input type="checkbox" [checked]="form().isActive" (change)="setActive($event)" />
-          Visible in shop
+          {{ 'adm.visible_in_shop' | t }}
         </label>
         <div class="form-actions">
           <button class="primary" type="submit" [disabled]="busy() === 'product'">
-            {{ busy() === 'product' ? 'Saving…' : form().id ? 'Save changes' : 'Add product' }}
+            {{ busy() === 'product' ? ('adm.saving' | t) : form().id ? ('adm.save_changes' | t) : ('adm.add_product' | t) }}
           </button>
           @if (form().id) {
-            <button class="secondary" type="button" (click)="form.set(emptyProduct())">Cancel</button>
+            <button class="secondary" type="button" (click)="form.set(emptyProduct())">{{ 'adm.cancel' | t }}</button>
           }
         </div>
       </form>
@@ -163,28 +172,30 @@
                   {{ s.size }}:{{ s.stock }}&nbsp;
                 }
               } @else {
-                {{ p.stock }} in stock
+                {{ 'adm.in_stock_n' | t: { n: p.stock } }}
               }
             </span>
-            <span class="status-pill" [attr.data-status]="p.isActive ? 'paid' : 'failed'">{{ p.isActive ? 'Visible' : 'Hidden' }}</span>
+            <span class="status-pill" [attr.data-status]="p.isActive ? 'paid' : 'failed'">
+              {{ p.isActive ? ('adm.visible' | t) : ('adm.hidden' | t) }}
+            </span>
             <div class="row-buttons">
               @if (confirmDelete() === p.id) {
-                <span class="muted">Delete “{{ p.name }}”?</span>
+                <span class="muted">{{ 'adm.delete_q' | t: { name: p.name } }}</span>
                 <button class="danger" (click)="deleteProduct(p)" [disabled]="busy() === p.id">
-                  {{ busy() === p.id ? 'Deleting…' : 'Yes, delete' }}
+                  {{ busy() === p.id ? ('adm.deleting' | t) : ('adm.yes_delete' | t) }}
                 </button>
-                <button class="secondary" (click)="confirmDelete.set(null)">Cancel</button>
+                <button class="secondary" (click)="confirmDelete.set(null)">{{ 'adm.cancel' | t }}</button>
               } @else {
                 <button
                   class="secondary"
                   (click)="toggleVisible(p)"
                   [disabled]="busy() === p.id"
-                  [title]="p.isActive ? 'Hide from Products' : 'Show in Products'"
+                  [title]="p.isActive ? ('adm.hide_title' | t) : ('adm.show_title' | t)"
                 >
-                  {{ p.isActive ? 'Hide' : 'Show' }}
+                  {{ p.isActive ? ('adm.hide' | t) : ('adm.show' | t) }}
                 </button>
-                <button class="secondary" (click)="edit(p)">Edit</button>
-                <button class="secondary danger-text" (click)="confirmDelete.set(p.id)">Delete</button>
+                <button class="secondary" (click)="edit(p)">{{ 'adm.edit' | t }}</button>
+                <button class="secondary danger-text" (click)="confirmDelete.set(p.id)">{{ 'adm.delete' | t }}</button>
               }
             </div>
           </div>
@@ -196,29 +207,32 @@
       <div class="inventory-summary">
         <div class="panel stat" data-level="out">
           <strong>{{ outOfStockCount() }}</strong>
-          <span class="muted">out of stock</span>
+          <span class="muted">{{ 'adm.out_of_stock_l' | t }}</span>
         </div>
         <div class="panel stat" data-level="low">
           <strong>{{ stockAlerts().length - outOfStockCount() }}</strong>
-          <span class="muted">low (≤ {{ inventory().lowStockThreshold }} left)</span>
+          <span class="muted">{{ 'adm.low_l' | t: { n: inventory().lowStockThreshold } }}</span>
         </div>
         <div class="panel stat">
           <strong>{{ inventory().rows.length }}</strong>
-          <span class="muted">items tracked</span>
+          <span class="muted">{{ 'adm.tracked' | t }}</span>
         </div>
       </div>
       <p class="muted inventory-help">
-        <strong>On hand</strong> is what you have in stock (paid orders are already taken off, including ones still to ship).
-        <strong>Reserved</strong> is held by checkouts started in the last {{ inventory().reservationMinutes }} minutes that aren't paid yet.
-        Shoppers can buy only what's <strong>available</strong>, so an item can't be sold twice.
+        <strong>{{ 'adm.help_on_hand' | t }}</strong>
+        {{ 'adm.help_1' | t }}
+        <strong>{{ 'adm.help_reserved' | t }}</strong>
+        {{ 'adm.help_2' | t: { n: inventory().reservationMinutes } }} {{ 'adm.help_3' | t }}
+        <strong>{{ 'adm.help_available' | t }}</strong>
+        {{ 'adm.help_4' | t }}
       </p>
       <label class="inline only-alerts">
         <input type="checkbox" [checked]="showOnlyAlerts()" (change)="showOnlyAlerts.set(!showOnlyAlerts())" />
-        Show only products that need restocking
+        {{ 'adm.only_alerts' | t }}
       </label>
       @if (visibleProducts().length) {
         <div class="inventory-layout">
-          <div class="inventory-products" role="listbox" aria-label="Products">
+          <div class="inventory-products" role="listbox" [attr.aria-label]="'adm.products' | t">
             @for (p of visibleProducts(); track p.productId) {
               <button
                 type="button"
@@ -232,17 +246,18 @@
                 <span class="inventory-product-name">
                   <strong>{{ p.productName }}</strong>
                   <span class="muted">
-                    {{ p.rows[0].size ? p.rows.length + ' sizes' : 'No sizes' }} · {{ p.available }} available
+                    {{ p.rows[0].size ? ('adm.sizes_n' | t: { n: p.rows.length }) : ('adm.no_sizes' | t) }} ·
+                    {{ 'adm.available_n' | t: { n: p.available } }}
                     @if (!p.isActive) {
-                      · hidden
+                      {{ 'adm.hidden_l' | t }}
                     }
                   </span>
                 </span>
                 <span class="status-pill" [attr.data-status]="p.level === 'ok' ? 'shipped' : p.level">
-                  {{ p.level === 'out' ? 'Out of stock' : p.level === 'low' ? 'Needs restock' : 'In stock' }}
+                  {{ p.level === 'out' ? ('adm.out_of_stock' | t) : p.level === 'low' ? ('adm.needs_restock' | t) : ('adm.in_stock' | t) }}
                 </span>
                 @if (hasStockEdits(p)) {
-                  <span class="unsaved-dot" title="Unsaved changes"></span>
+                  <span class="unsaved-dot" [title]="'adm.unsaved' | t"></span>
                 }
               </button>
             }
@@ -253,15 +268,15 @@
               <div class="stock-editor-head">
                 <h3>{{ p.productName }}</h3>
                 @if (!p.isActive) {
-                  <span class="muted">Hidden from the shop</span>
+                  <span class="muted">{{ 'adm.hidden_from_shop' | t }}</span>
                 }
               </div>
               <div class="stock-line stock-line-head muted">
-                <span>Size</span>
-                <span>On hand</span>
-                <span>Reserved</span>
-                <span>To ship</span>
-                <span>Available</span>
+                <span>{{ 'common.size' | t }}</span>
+                <span>{{ 'adm.on_hand' | t }}</span>
+                <span>{{ 'adm.reserved' | t }}</span>
+                <span>{{ 'adm.to_ship' | t }}</span>
+                <span>{{ 'adm.available' | t }}</span>
                 <span></span>
               </div>
               @for (r of p.rows; track rowKey(r)) {
@@ -273,29 +288,33 @@
                     step="1"
                     [value]="pendingStock(r) ?? r.onHand"
                     (input)="editStock(r, $event)"
-                    [attr.aria-label]="'On hand for ' + p.productName + (r.size ? ' size ' + r.size : '')"
+                    [attr.aria-label]="
+                      r.size
+                        ? ('adm.on_hand_for_size' | t: { name: p.productName, size: r.size })
+                        : ('adm.on_hand_for' | t: { name: p.productName })
+                    "
                   />
                   <span>{{ r.reserved }}</span>
                   <span>{{ r.awaitingShipment }}</span>
                   <strong>{{ r.available }}</strong>
                   <span class="status-pill" [attr.data-status]="level(r) === 'ok' ? 'shipped' : level(r)">
-                    {{ level(r) === 'out' ? 'Out of stock' : level(r) === 'low' ? 'Low stock' : 'In stock' }}
+                    {{ level(r) === 'out' ? ('adm.out_of_stock' | t) : level(r) === 'low' ? ('adm.low_stock' | t) : ('adm.in_stock' | t) }}
                   </span>
                 </div>
               }
               <div class="form-actions stock-actions">
                 <button class="primary" type="submit" [disabled]="!hasStockEdits(p) || busy() === p.productId">
-                  {{ busy() === p.productId ? 'Saving…' : 'Save stock' }}
+                  {{ busy() === p.productId ? ('adm.saving' | t) : ('adm.save_stock' | t) }}
                 </button>
                 @if (hasStockEdits(p)) {
-                  <button class="secondary" type="button" (click)="discardStock(p)">Discard changes</button>
+                  <button class="secondary" type="button" (click)="discardStock(p)">{{ 'adm.discard' | t }}</button>
                 }
               </div>
             </form>
           }
         </div>
       } @else {
-        <p class="empty-preview">{{ showOnlyAlerts() ? 'Everything is well stocked.' : 'No products yet.' }}</p>
+        <p class="empty-preview">{{ showOnlyAlerts() ? ('adm.well_stocked' | t) : ('adm.no_products' | t) }}</p>
       }
     }
 
@@ -310,27 +329,27 @@
             <div>
               <span class="license-key">{{ l.licenseKey }}</span>
               <p class="muted">
-                {{ l.product }} · since {{ l.purchasedAt | date: 'd MMM y' }}
+                {{ 'adm.since' | t: { product: l.product, date: (l.purchasedAt | ldate: 'd MMM y') } }}
                 @if (l.expiresAt) {
-                  · expires {{ l.expiresAt | date: 'd MMM y' }}
+                  {{ 'adm.expires' | t: { date: (l.expiresAt | ldate: 'd MMM y') } }}
                 }
               </p>
             </div>
             <div class="row-buttons">
-              <span class="status-pill" data-status="shipped">Active</span>
+              <span class="status-pill" data-status="shipped">{{ 'adm.active' | t }}</span>
               @if (confirmDelete() === l.id) {
-                <span class="muted">Remove license from {{ l.userEmail }}?</span>
+                <span class="muted">{{ 'adm.remove_q' | t: { email: l.userEmail } }}</span>
                 <button class="danger" (click)="revokeLicense(l)" [disabled]="busy() === l.id">
-                  {{ busy() === l.id ? 'Removing…' : 'Yes, remove' }}
+                  {{ busy() === l.id ? ('adm.removing' | t) : ('adm.yes_remove' | t) }}
                 </button>
-                <button class="secondary" (click)="confirmDelete.set(null)">Cancel</button>
+                <button class="secondary" (click)="confirmDelete.set(null)">{{ 'adm.cancel' | t }}</button>
               } @else {
-                <button class="secondary danger-text" (click)="confirmDelete.set(l.id)">Remove license</button>
+                <button class="secondary danger-text" (click)="confirmDelete.set(l.id)">{{ 'adm.remove_license' | t }}</button>
               }
             </div>
           </div>
         } @empty {
-          <p class="empty-preview">No active licenses yet.</p>
+          <p class="empty-preview">{{ 'adm.no_licenses' | t }}</p>
         }
       </div>
     }

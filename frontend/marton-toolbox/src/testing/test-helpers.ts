@@ -33,6 +33,8 @@ export interface RenderOptions {
 function configure(routes: Routes, { providers = [], user }: RenderOptions) {
   localStorage.clear();
   sessionStorage.clear();
+  // Tests read the English texts, whatever the machine's language.
+  localStorage.setItem('mtb_lang', 'en');
   if (user) logIn(user);
   TestBed.configureTestingModule({
     providers: [

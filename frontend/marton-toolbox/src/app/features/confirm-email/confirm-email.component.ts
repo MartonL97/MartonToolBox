@@ -3,17 +3,20 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../core/auth/auth.service';
 import { IconComponent } from '../../core/ui/icon.component';
+import { I18nService } from '../../core/i18n/i18n.service';
+import { I18N } from '../../core/i18n/translate.pipe';
 
 /** Target of the link in the confirmation email: activates the account, signs in, and moves on. */
 @Component({
   standalone: true,
-  imports: [RouterLink, IconComponent],
+  imports: [RouterLink, IconComponent, ...I18N],
   templateUrl: './confirm-email.component.html',
   styleUrl: './confirm-email.component.scss',
 })
 export class ConfirmEmailComponent {
   private auth = inject(AuthService);
   private router = inject(Router);
+  private i18n = inject(I18nService);
   state = signal<'working' | 'done' | 'already' | 'failed'>('working');
   error = signal('');
   email = signal('');
@@ -25,7 +28,7 @@ export class ConfirmEmailComponent {
     const userId = params.get('userId'),
       token = params.get('token');
     if (!userId || !token) {
-      this.fail('This confirmation link is incomplete. Make sure you copied the whole link.');
+      this.fail(this.i18n.t('confirm.incomplete'));
       return;
     }
     this.auth
@@ -36,8 +39,8 @@ export class ConfirmEmailComponent {
       })
       .catch((err: HttpErrorResponse) => {
         if (err.status === 409) this.state.set('already');
-        else if (err.status === 0 || err.status >= 500) this.fail("We couldn't reach the server. Please try the link again in a moment.");
-        else this.fail(err.error?.error ?? 'This confirmation link is invalid or has expired. Enter your email to get a new one.');
+        else if (err.status === 0 || err.status >= 500) this.fail(this.i18n.t('confirm.unreachable'));
+        else this.fail(this.i18n.server(err.error?.error, 'confirm.invalid'));
       });
   }
 
