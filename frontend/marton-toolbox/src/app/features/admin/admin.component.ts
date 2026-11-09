@@ -1,7 +1,7 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
-import { ShopOrder, money } from '../../core/shop/cart.service';
+import { OrderStep, ShopOrder, money, nextOrderStep, orderStage, orderTimeline } from '../../core/shop/cart.service';
 import { I18nService } from '../../core/i18n/i18n.service';
 import { I18N } from '../../core/i18n/translate.pipe';
 
@@ -125,6 +125,10 @@ export class AdminComponent {
   /** Unsaved on-hand counts typed into the inventory table, keyed by rowKey. */
   stockEdits = signal<Record<string, number>>({});
   showOnlyAlerts = signal(false);
+  /** Unsaved AWB numbers typed on the orders tab, keyed by order id. */
+  trackingEdits = signal<Record<string, string>>({});
+  /** What Sameday answered when an AWB was just saved, keyed by order id. */
+  trackingNotes = signal<Record<string, string>>({});
   /** Rows that are out of stock or at/below the low-stock threshold. */
   stockAlerts = computed(() => this.inventory().rows.filter((r) => this.level(r) !== 'ok'));
   outOfStockCount = computed(() => this.stockAlerts().filter((r) => this.level(r) === 'out').length);
@@ -159,6 +163,8 @@ export class AdminComponent {
   cancelRequests = computed(() => this.shopOrders().filter((o) => o.order.status === 'CancelRequested').length);
   emptyProduct = emptyProduct;
   money = money;
+  stage = orderStage;
+  nextStep = nextOrderStep;
 
   constructor() {
     this.load();
@@ -290,10 +296,45 @@ export class AdminComponent {
     }
   }
 
-  async ship(o: AdminShopOrder) {
+  /** The most recent delivery step that has a date. */
+  lastStep(o: ShopOrder) {
+    return orderTimeline(o)
+      .filter((s) => s.done && s.at)
+      .pop();
+  }
+
+  async advance(o: AdminShopOrder, stage: OrderStep) {
     await this.run(o.order.id, async () => {
-      await firstValueFrom(this.http.post(`/api/admin/shop/orders/${o.order.id}/ship`, {}));
+      await firstValueFrom(this.http.post(`/api/admin/shop/orders/${o.order.id}/advance`, { stage }));
       this.shopOrders.set(await this.get<AdminShopOrder[]>('/api/admin/shop/orders'));
+    });
+  }
+
+  trackingValue(o: AdminShopOrder) {
+    return this.trackingEdits()[o.order.id] ?? o.order.trackingNumber ?? '';
+  }
+
+  trackingChanged(o: AdminShopOrder) {
+    return this.trackingValue(o).trim() !== (o.order.trackingNumber ?? '');
+  }
+
+  editTracking(o: AdminShopOrder, event: Event) {
+    const value = (event.target as HTMLInputElement).value;
+    this.trackingEdits.update((e) => ({ ...e, [o.order.id]: value }));
+  }
+
+  async saveTracking(o: AdminShopOrder) {
+    if (!this.trackingChanged(o)) return;
+    await this.run(o.order.id, async () => {
+      const trackingNumber = this.trackingValue(o).trim();
+      const res = await firstValueFrom(
+        this.http.put<{ data: { courierStatus: string | null } }>(`/api/admin/shop/orders/${o.order.id}/tracking`, { trackingNumber }),
+      );
+      const status = res.data.courierStatus;
+      const note = !trackingNumber ? '' : status ? this.i18n.t('adm.sameday_status', { status }) : this.i18n.t('adm.sameday_none');
+      this.trackingNotes.update((n) => ({ ...n, [o.order.id]: note }));
+      this.shopOrders.set(await this.get<AdminShopOrder[]>('/api/admin/shop/orders'));
+      this.trackingEdits.update(({ [o.order.id]: _saved, ...rest }) => rest);
     });
   }
 

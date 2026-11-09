@@ -21,7 +21,20 @@ public sealed class Order
     public string? ShippingCity { get; set; }
     public string? ShippingCounty { get; set; }
     public string? ShippingPostalCode { get; set; }
+    // Delivery timeline, in order. An admin moves a paid order through these one step at a time.
+    public DateTimeOffset? PaidAt { get; set; }
+    public DateTimeOffset? PreparedAt { get; set; }
+    /// <summary>When the AWB was registered: Sameday's date, or when an admin saved it.</summary>
+    public DateTimeOffset? RegisteredAt { get; set; }
     public DateTimeOffset? ShippedAt { get; set; }
+    public DateTimeOffset? AtCourierDepotAt { get; set; }
+    public DateTimeOffset? OutForDeliveryAt { get; set; }
+    /// <summary>When the customer received the order. The order is finished from then on.</summary>
+    public DateTimeOffset? DeliveredAt { get; set; }
+    /// <summary>The courier's AWB, set by an admin and shown to the buyer.</summary>
+    public string? TrackingNumber { get; set; }
+    /// <summary>When the courier was last asked about this AWB.</summary>
+    public DateTimeOffset? TrackingCheckedAt { get; set; }
 }
 
 public static class OrderKinds

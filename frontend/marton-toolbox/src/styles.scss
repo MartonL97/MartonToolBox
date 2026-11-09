@@ -1953,9 +1953,17 @@ tr:last-child td {
   background: var(--brand-soft);
   color: var(--brand-ink);
 }
+.status-pill[data-status='prepared'],
+.status-pill[data-status='registered'],
+.status-pill[data-status='atcourierdepot'],
+.status-pill[data-status='outfordelivery'],
 .status-pill[data-status='shipped'] {
   background: #dcfce7;
   color: #15803d;
+}
+.status-pill[data-status='finished'] {
+  background: #15803d;
+  color: #fff;
 }
 .status-pill[data-status='failed'] {
   background: #f1f5f9;

@@ -178,6 +178,7 @@ public sealed class PayUPaymentService(HttpClient http, AppDbContext db, ILicens
         if (state == OrderState.Completed && order.Kind == OrderKinds.Shop)
         {
             // Reached once per order: a Paid order returns early above.
+            order.PaidAt = DateTimeOffset.UtcNow;
             var items = await db.OrderItems.Where(i => i.OrderId == order.Id).ToListAsync(ct);
             var ids = items.Select(i => i.ProductId).ToList();
             var products = await db.ShopProducts.Where(p => ids.Contains(p.Id)).ToDictionaryAsync(p => p.Id, ct);

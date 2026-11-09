@@ -42,8 +42,44 @@ export interface ShopOrder {
   shippingCost: number;
   currency: string;
   createdAt: string;
+  paidAt: string | null;
+  preparedAt: string | null;
+  registeredAt: string | null;
   shippedAt: string | null;
+  atCourierDepotAt: string | null;
+  outForDeliveryAt: string | null;
+  /** Set when an admin marks the order as received; it is finished from then on. */
+  deliveredAt: string | null;
+  /** The courier's AWB, once an admin has added it. */
+  trackingNumber: string | null;
   items: { productName: string; size: string | null; unitPrice: number; quantity: number }[];
+}
+
+export const ORDER_STEPS = ['Placed', 'Paid', 'Prepared', 'Registered', 'Shipped', 'AtCourierDepot', 'OutForDelivery', 'Delivered'] as const;
+export type OrderStep = (typeof ORDER_STEPS)[number];
+export interface OrderTimelineStep {
+  key: OrderStep;
+  at: string | null;
+  done: boolean;
+}
+
+/** Every delivery step in order. Orders from before a step existed have no date for it, but still count it as done. */
+export function orderTimeline(o: ShopOrder): OrderTimelineStep[] {
+  const dates = [o.createdAt, o.paidAt, o.preparedAt, o.registeredAt, o.shippedAt, o.atCourierDepotAt, o.outForDeliveryAt, o.deliveredAt];
+  const latest = Math.max(o.status === 'Paid' ? 1 : 0, dates.reduce((last, at, i) => (at ? i : last), 0));
+  return ORDER_STEPS.map((key, i) => ({ key, at: dates[i] ?? null, done: i <= latest }));
+}
+
+/** The step an admin can move a paid order to next; null when it's finished or unpaid. Saving an AWB sets Registered. */
+export function nextOrderStep(o: ShopOrder): OrderStep | null {
+  return o.status === 'Paid' ? (orderTimeline(o).find((s) => !s.done && s.key !== 'Registered')?.key ?? null) : null;
+}
+
+/** The stage to show for an order: delivery progress once paid, otherwise its payment status. */
+export function orderStage(o: ShopOrder): string {
+  if (o.status !== 'Paid') return o.status;
+  const current = orderTimeline(o).filter((s) => s.done).pop()!.key;
+  return current === 'Delivered' ? 'Finished' : current;
 }
 
 const STORAGE_KEY = 'mtb_cart';

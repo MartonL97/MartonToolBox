@@ -84,12 +84,53 @@ describe('AdminComponent', () => {
     expect(text(el)).toContain('1 × MartonToolBox T-Shirt — size M');
     expect(text(el)).toContain('400001 Cluj, Cluj');
 
-    click(Array.from(el.querySelectorAll('button')).find((b) => text(b) === 'Mark as shipped'));
-    http.expectOne(`/api/admin/shop/orders/${ORDER.order.id}/ship`).flush({ data: 'Shipped' });
+    const button = (label: string) => Array.from(el.querySelectorAll('button')).find((b) => text(b) === label);
+    click(button('Mark as ready for delivery'));
+    const prepared = http.expectOne(`/api/admin/shop/orders/${ORDER.order.id}/advance`);
+    expect(prepared.request.body).toEqual({ stage: 'Prepared' });
+    prepared.flush({ data: 'Prepared' });
     await settle(fixture);
-    http.expectOne('/api/admin/shop/orders').flush({ data: [{ ...ORDER, order: { ...ORDER.order, shippedAt: '2026-10-27T12:00:00Z' } }] });
+    http.expectOne('/api/admin/shop/orders').flush({ data: [{ ...ORDER, order: { ...ORDER.order, preparedAt: '2026-10-27T12:00:00Z' } }] });
     await settle(fixture);
-    expect(text(el)).toContain('Shipped 27 Oct 2026');
+    expect(text(el)).toContain('Products ready for delivery · 27 Oct 2026');
+    expect(button('Mark as shipped')).toBeTruthy();
+  });
+
+  it('offers the last step after the courier, then nothing once finished', async () => {
+    const { el, http, fixture } = await setup();
+    const button = (label: string) => Array.from(el.querySelectorAll('button')).find((b) => text(b) === label);
+    const reload = async (dates: object) => {
+      fixture.componentInstance.load();
+      http.expectOne('/api/admin/licenses').flush({ data: [] });
+      http.expectOne('/api/admin/shop/orders').flush({ data: [{ ...ORDER, order: { ...ORDER.order, ...dates } }] });
+      http.expectOne('/api/admin/shop/products').flush({ data: [] });
+      http.expectOne('/api/admin/inventory').flush({ data: { rows: [], lowStockThreshold: 3, reservationMinutes: 30 } });
+      await settle(fixture);
+    };
+    await reload({ outForDeliveryAt: '2026-10-28T12:00:00Z' });
+    expect(button('Mark as finished')).toBeTruthy();
+    await reload({ outForDeliveryAt: '2026-10-28T12:00:00Z', deliveredAt: '2026-10-29T12:00:00Z' });
+    expect(text(el)).toContain('Delivered · 29 Oct 2026');
+    expect(text(el.querySelector('.admin-order .status-pill'))).toBe('Finished');
+    expect(button('Mark as finished')).toBeUndefined();
+  });
+
+  it('saves an AWB on a paid order', async () => {
+    const { el, http, fixture } = await setup();
+    const input = el.querySelector('.awb-form input') as HTMLInputElement;
+    input.value = ' AWB123456 ';
+    input.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+    el.querySelector('.awb-form')!.dispatchEvent(new Event('submit'));
+
+    const save = http.expectOne(`/api/admin/shop/orders/${ORDER.order.id}/tracking`);
+    expect(save.request.body).toEqual({ trackingNumber: 'AWB123456' });
+    save.flush({ data: { trackingNumber: 'AWB123456', courierStatus: 'Colet preluat' } });
+    await settle(fixture);
+    http.expectOne('/api/admin/shop/orders').flush({ data: [{ ...ORDER, order: { ...ORDER.order, trackingNumber: 'AWB123456' } }] });
+    await settle(fixture);
+    expect((el.querySelector('.awb-form input') as HTMLInputElement).value).toBe('AWB123456');
+    expect(text(el)).toContain('Sameday: Colet preluat');
   });
 
   it('hides a product with one click', async () => {

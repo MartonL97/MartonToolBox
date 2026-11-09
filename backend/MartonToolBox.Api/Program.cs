@@ -19,6 +19,7 @@ builder.Configuration.AddJsonFile("appsettings.Local.json", optional: true, relo
     .AddCommandLine(args);
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddScoped<TokenService>();
+builder.Services.AddHostedService<AwbTrackingJob>();
 builder.Services.AddMemoryCache();
 builder.Services.AddControllers().AddJsonOptions(options => options.JsonSerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter()));
 builder.Services.AddEndpointsApiExplorer(); builder.Services.AddSwaggerGen();

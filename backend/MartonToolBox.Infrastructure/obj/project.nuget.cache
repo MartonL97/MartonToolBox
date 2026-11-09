@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "dgSpecHash": "0FmBBkrik8o=",
+  "dgSpecHash": "ENohfhTfg6I=",
   "success": true,
   "projectFilePath": "/Users/lakatosmarton/Desktop/MartonToolbox Repo/backend/MartonToolBox.Infrastructure/MartonToolBox.Infrastructure.csproj",
   "expectedPackageFiles": [
@@ -68,8 +68,7 @@
       "message": "Package 'MailKit' 4.8.0 has a known moderate severity vulnerability, https://github.com/advisories/GHSA-9j88-vvj5-vhgr",
       "libraryId": "MailKit",
       "targetGraphs": [
-        "net8.0",
-        "net8.0/win-x64"
+        "net8.0"
       ]
     }
   ]

@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "dgSpecHash": "1CWbDWUcEFw=",
+  "dgSpecHash": "3E1YtpGkfdg=",
   "success": true,
   "projectFilePath": "/Users/lakatosmarton/Desktop/MartonToolbox Repo/backend/MartonToolBox.Api/MartonToolBox.Api.csproj",
   "expectedPackageFiles": [
@@ -72,8 +72,7 @@
     "/Users/lakatosmarton/.nuget/packages/system.runtime.compilerservices.unsafe/6.0.0/system.runtime.compilerservices.unsafe.6.0.0.nupkg.sha512",
     "/Users/lakatosmarton/.nuget/packages/system.security.cryptography.pkcs/8.0.0/system.security.cryptography.pkcs.8.0.0.nupkg.sha512",
     "/Users/lakatosmarton/.nuget/packages/system.text.encoding.codepages/6.0.0/system.text.encoding.codepages.6.0.0.nupkg.sha512",
-    "/Users/lakatosmarton/.nuget/packages/system.threading.channels/6.0.0/system.threading.channels.6.0.0.nupkg.sha512",
-    "/Users/lakatosmarton/.nuget/packages/microsoft.netcore.app.host.win-x64/8.0.28/microsoft.netcore.app.host.win-x64.8.0.28.nupkg.sha512"
+    "/Users/lakatosmarton/.nuget/packages/system.threading.channels/6.0.0/system.threading.channels.6.0.0.nupkg.sha512"
   ],
   "logs": []
 }

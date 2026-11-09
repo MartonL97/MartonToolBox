@@ -64,4 +64,20 @@ describe('ShopOrderComponent', () => {
     const { el } = await setup({ ...ORDER, shippedAt: '2026-10-28T09:00:00Z' });
     expect(el.textContent).toContain('Your order has shipped.');
   });
+
+  it('shows the delivery steps reached so far with their dates', async () => {
+    const { el } = await setup({ ...ORDER, paidAt: '2026-10-27T10:02:00Z', preparedAt: '2026-10-27T15:00:00Z' });
+    const steps = Array.from(el.querySelectorAll('.timeline li'));
+    expect(steps.map((s) => s.classList.contains('done'))).toEqual([true, true, true, false, false, false, false, false]);
+    expect(text(steps[2])).toContain('Products ready for delivery');
+    expect(steps[2].querySelector('time')).toBeTruthy();
+    expect(steps[3].querySelector('time')).toBeNull();
+  });
+
+  it('shows a finished order and its AWB without letting the buyer change anything', async () => {
+    const { el } = await setup({ ...ORDER, shippedAt: '2026-10-28T09:00:00Z', deliveredAt: '2026-10-30T09:00:00Z', trackingNumber: 'AWB123456' });
+    expect(el.textContent).toContain('Your order has been delivered.');
+    expect(text(el.querySelector('.tracking'))).toContain('AWB123456');
+    expect(el.querySelector('.actions button')).toBeNull();
+  });
 });

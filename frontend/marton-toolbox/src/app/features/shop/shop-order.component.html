@@ -8,7 +8,9 @@
           <h1>{{ 'order.thanks' | t }}</h1>
           <p class="lead">
             {{ 'order.paid' | t }}
-            @if (o.shippedAt) {
+            @if (o.deliveredAt) {
+              {{ 'order.finished' | t }}
+            } @else if (o.shippedAt) {
               {{ 'order.shipped' | t }}
             } @else {
               {{ 'order.will_ship' | t }}
@@ -50,6 +52,10 @@
       </div>
     }
 
+    @if (o.status === 'Paid' || o.status === 'Pending') {
+      <mtb-order-timeline [order]="o" />
+    }
+
     <div class="panel order-panel">
       @for (item of o.items; track $index) {
         <div class="summary-row">
@@ -70,6 +76,12 @@
         <span>{{ 'common.total' | t }}</span>
         <span>{{ money(o.amount, o.currency) }}</span>
       </div>
+      @if (o.trackingNumber) {
+        <div class="summary-row tracking">
+          <span>{{ 'order.awb' | t }}</span>
+          <strong>{{ o.trackingNumber }}</strong>
+        </div>
+      }
     </div>
 
     <div class="actions">

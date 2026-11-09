@@ -4,6 +4,7 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { CartService, ShopOrder, money } from '../../core/shop/cart.service';
 import { IconComponent } from '../../core/ui/icon.component';
+import { OrderTimelineComponent } from './order-timeline.component';
 import { I18nService } from '../../core/i18n/i18n.service';
 import { I18N } from '../../core/i18n/translate.pipe';
 
@@ -13,7 +14,7 @@ const MAX_ATTEMPTS = 10;
 /** PayU sends the buyer back here; we poll until PayU reports a final status. */
 @Component({
   standalone: true,
-  imports: [RouterLink, IconComponent, ...I18N],
+  imports: [RouterLink, IconComponent, OrderTimelineComponent, ...I18N],
   templateUrl: './shop-order.component.html',
   styleUrl: './shop-order.component.scss',
 })

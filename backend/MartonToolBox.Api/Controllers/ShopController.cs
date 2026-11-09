@@ -25,7 +25,7 @@ public sealed record ShippingRequest(
     [Required, StringLength(12, MinimumLength = 4)] string PostalCode);
 public sealed record PlaceOrderRequest([Required, MinLength(1)] IReadOnlyList<CartLineRequest> Items, [Required] ShippingRequest Shipping);
 public sealed record ShopOrderItemDto(string ProductName, string? Size, decimal UnitPrice, int Quantity);
-public sealed record ShopOrderDto(Guid Id, string Status, decimal Amount, decimal ShippingCost, string Currency, DateTimeOffset CreatedAt, DateTimeOffset? ShippedAt, IReadOnlyList<ShopOrderItemDto> Items);
+public sealed record ShopOrderDto(Guid Id, string Status, decimal Amount, decimal ShippingCost, string Currency, DateTimeOffset CreatedAt, DateTimeOffset? PaidAt, DateTimeOffset? PreparedAt, DateTimeOffset? RegisteredAt, DateTimeOffset? ShippedAt, DateTimeOffset? AtCourierDepotAt, DateTimeOffset? OutForDeliveryAt, DateTimeOffset? DeliveredAt, string? TrackingNumber, IReadOnlyList<ShopOrderItemDto> Items);
 
 [ApiController, Route("api/shop")]
 public sealed class ShopController(AppDbContext db, PayUPaymentService payu, UserManager<AppUser> users, IConfiguration configuration, ILogger<ShopController> logger) : ControllerBase
@@ -188,7 +188,7 @@ public sealed class ShopController(AppDbContext db, PayUPaymentService payu, Use
         var orders = await query.Where(o => o.Kind == OrderKinds.Shop).OrderByDescending(o => o.CreatedAt).ToListAsync(ct);
         var ids = orders.Select(o => o.Id).ToList();
         var items = (await db.OrderItems.Where(i => ids.Contains(i.OrderId)).ToListAsync(ct)).ToLookup(i => i.OrderId);
-        return orders.Select(o => new ShopOrderDto(o.Id, o.Status, o.Amount, o.ShippingCost, o.Currency, o.CreatedAt, o.ShippedAt,
+        return orders.Select(o => new ShopOrderDto(o.Id, o.Status, o.Amount, o.ShippingCost, o.Currency, o.CreatedAt, o.PaidAt, o.PreparedAt, o.RegisteredAt, o.ShippedAt, o.AtCourierDepotAt, o.OutForDeliveryAt, o.DeliveredAt, o.TrackingNumber,
             items[o.Id].Select(i => new ShopOrderItemDto(i.ProductName, i.Size, i.UnitPrice, i.Quantity)).ToList())).ToList();
     }
 

@@ -1,5 +1,6 @@
 using MartonToolBox.Api.Contracts;
 using System.ComponentModel.DataAnnotations;
+using MartonToolBox.Application.Shipping;
 using MartonToolBox.Domain.Entities;
 using MartonToolBox.Infrastructure.Persistence;
 using MartonToolBox.Api.Services;
@@ -33,6 +34,9 @@ public sealed record InventoryDto(IReadOnlyList<InventoryRowDto> Rows, int LowSt
 /// <summary>VariantId is null for a product without sizes.</summary>
 public sealed record SetStockItem(Guid? VariantId, [Range(0, 1_000_000)] int Stock);
 public sealed record SetProductStockRequest([Required, MinLength(1)] IReadOnlyList<SetStockItem> Items);
+public sealed record AdvanceOrderRequest([Required] string Stage);
+public sealed record SetTrackingRequest([StringLength(64)] string? TrackingNumber);
+public sealed record SetTrackingResult(string? TrackingNumber, string? CourierStatus);
 public sealed record AdminShopOrderDto(ShopOrderDto Order, string UserEmail, string? ShippingName, string? ShippingPhone, string? ShippingAddress, string? ShippingCity, string? ShippingCounty, string? ShippingPostalCode);
 
 /// <summary>
@@ -40,7 +44,7 @@ public sealed record AdminShopOrderDto(ShopOrderDto Order, string UserEmail, str
 /// Only users with the Admin role, checked per request, can call these.
 /// </summary>
 [ApiController, Route("api/admin"), Authorize(Policy = AdminPolicy.Name)]
-public sealed class AdminController(AppDbContext db, PayUPaymentService payu, IConfiguration configuration, ILogger<AdminController> logger) : ControllerBase
+public sealed class AdminController(AppDbContext db, PayUPaymentService payu, ICourierTracking courier, IConfiguration configuration, ILogger<AdminController> logger) : ControllerBase
 {
     /// <summary>Everyone with an active license, newest first.</summary>
     [HttpGet("licenses")]
@@ -193,15 +197,59 @@ public sealed class AdminController(AppDbContext db, PayUPaymentService payu, IC
             o.ShippingName, o.ShippingPhone, o.ShippingAddress, o.ShippingCity, o.ShippingCounty, o.ShippingPostalCode)).ToList()));
     }
 
-    [HttpPost("shop/orders/{orderId:guid}/ship")]
-    public async Task<IActionResult> MarkShipped(Guid orderId, CancellationToken ct)
+    /// <summary>
+    /// Moves a paid order to its next delivery step. The caller names the step it means, so a double click or
+    /// a stale page can't skip one.
+    /// </summary>
+    [HttpPost("shop/orders/{orderId:guid}/advance")]
+    public async Task<IActionResult> AdvanceOrder(Guid orderId, AdvanceOrderRequest request, CancellationToken ct)
     {
         var order = await db.Orders.FirstOrDefaultAsync(o => o.Id == orderId && o.Kind == OrderKinds.Shop, ct);
         if (order is null) return NotFound();
-        if (order.Status != "Paid") return BadRequest(new { error = "Only paid orders can be marked as shipped." });
-        order.ShippedAt ??= DateTimeOffset.UtcNow;
+        if (order.Status != "Paid") return BadRequest(new { error = "Only paid orders can move through delivery." });
+        var steps = new (string Name, DateTimeOffset? At, Action<DateTimeOffset> Set)[]
+        {
+            ("Prepared", order.PreparedAt, t => order.PreparedAt = t),
+            ("Shipped", order.ShippedAt, t => order.ShippedAt = t),
+            ("AtCourierDepot", order.AtCourierDepotAt, t => order.AtCourierDepotAt = t),
+            ("OutForDelivery", order.OutForDeliveryAt, t => order.OutForDeliveryAt = t),
+            ("Delivered", order.DeliveredAt, t => order.DeliveredAt = t),
+        };
+        var next = Array.FindLastIndex(steps, s => s.At is not null) + 1;
+        if (next == steps.Length || steps[next].Name != request.Stage) return Conflict(new { error = "This order has already moved on. Reload the page." });
+        steps[next].Set(DateTimeOffset.UtcNow);
         await db.SaveChangesAsync(ct);
-        return Ok(new ApiResponse<string>("Shipped"));
+        return Ok(new ApiResponse<string>(request.Stage));
+    }
+
+    /// <summary>Sets or corrects the courier's AWB on a paid order and reads its status right away; an empty value removes it.</summary>
+    [HttpPut("shop/orders/{orderId:guid}/tracking")]
+    public async Task<IActionResult> SetTracking(Guid orderId, SetTrackingRequest request, CancellationToken ct)
+    {
+        var order = await db.Orders.FirstOrDefaultAsync(o => o.Id == orderId && o.Kind == OrderKinds.Shop, ct);
+        if (order is null) return NotFound();
+        if (order.Status != "Paid") return BadRequest(new { error = "Only paid orders can have an AWB." });
+        order.TrackingNumber = string.IsNullOrWhiteSpace(request.TrackingNumber) ? null : request.TrackingNumber.Trim();
+        order.TrackingCheckedAt = null;
+        if (order.TrackingNumber is null)
+        {
+            order.RegisteredAt = null;
+            await db.SaveChangesAsync(ct);
+            return Ok(new ApiResponse<SetTrackingResult>(new SetTrackingResult(null, null)));
+        }
+
+        // The AWB is saved whether or not Sameday answers; the background job tries again later.
+        var events = await courier.GetEventsAsync(order.TrackingNumber, ct);
+        if (events is not null)
+        {
+            CourierTimeline.Apply(order, events);
+            order.TrackingCheckedAt = DateTimeOffset.UtcNow;
+        }
+        var now = DateTimeOffset.UtcNow;
+        order.PreparedAt ??= now;
+        order.RegisteredAt ??= now;
+        await db.SaveChangesAsync(ct);
+        return Ok(new ApiResponse<SetTrackingResult>(new SetTrackingResult(order.TrackingNumber, events?.LastOrDefault()?.Status)));
     }
 
     /// <summary>

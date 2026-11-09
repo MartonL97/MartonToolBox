@@ -4,6 +4,7 @@ using MartonToolBox.Application.Documents;
 using MartonToolBox.Application.Email;
 using MartonToolBox.Application.Licensing;
 using MartonToolBox.Application.Payments;
+using MartonToolBox.Application.Shipping;
 using MartonToolBox.Domain.Entities;
 using MartonToolBox.Infrastructure.Identity;
 using MartonToolBox.Infrastructure.Persistence;
@@ -35,6 +36,12 @@ public static class DependencyInjection
         services.AddScoped<ICsvService, CsvService>(); services.AddSingleton<IDocumentConverter, LibreOfficeConverter>(); services.AddSingleton<IEmailSender, SmtpEmailSender>(); services.AddScoped<ILicenseService, LicenseService>();
         services.AddSingleton(TimeProvider.System);
         services.AddScoped<IAiQuotaService, AiQuotaService>();
+        services.AddHttpClient<ICourierTracking, SamedayTrackingService>(client =>
+        {
+            client.BaseAddress = new Uri("https://api.sameday.ro/");
+            client.Timeout = TimeSpan.FromSeconds(15);
+            client.DefaultRequestHeaders.UserAgent.ParseAdd("MartonToolBox/1.0");
+        });
 
         // Self-hosted LLM (llama.cpp server in Docker, OpenAI-compatible API). Replies stream for as long as the model
         // needs, so the timeout is generous. Llm:ApiKey must match the server's key (LLM_API_KEY in docker-compose).

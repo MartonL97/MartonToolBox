@@ -31,8 +31,8 @@
           <div class="panel admin-order">
             <div>
               <strong>{{ 'common.order_id' | t: { id: short(o.order.id) } }}</strong>
-              <span class="status-pill" [attr.data-status]="o.order.shippedAt ? 'shipped' : o.order.status.toLowerCase()">
-                {{ 'order.status.' + (o.order.shippedAt ? 'Shipped' : o.order.status) | t }}
+              <span class="status-pill" [attr.data-status]="stage(o.order).toLowerCase()">
+                {{ 'order.status.' + stage(o.order) | t }}
               </span>
               <p class="muted">{{ o.order.createdAt | ldate: 'd MMM y, HH:mm' }} · {{ o.userEmail }}</p>
               @for (i of o.order.items; track $index) {
@@ -61,13 +61,16 @@
                 {{ o.shippingPostalCode }} {{ o.shippingCity }}, {{ o.shippingCounty }}
               </p>
             </div>
-            <div>
-              @if (o.order.status === 'Paid' && !o.order.shippedAt) {
-                <button class="primary" (click)="ship(o)" [disabled]="busy() === o.order.id">
-                  {{ busy() === o.order.id ? ('adm.saving' | t) : ('adm.mark_shipped' | t) }}
-                </button>
-              } @else if (o.order.shippedAt) {
-                <span class="muted">{{ 'adm.shipped_on' | t: { date: (o.order.shippedAt | ldate: 'd MMM y') } }}</span>
+            <div class="order-actions">
+              @if (o.order.status === 'Paid') {
+                @if (lastStep(o.order); as step) {
+                  <span class="muted">{{ 'order.step.' + step.key | t }} · {{ step.at | ldate: 'd MMM y' }}</span>
+                }
+                @if (nextStep(o.order); as step) {
+                  <button class="primary" (click)="advance(o, step)" [disabled]="busy() === o.order.id">
+                    {{ busy() === o.order.id ? ('adm.saving' | t) : ('adm.next.' + step | t) }}
+                  </button>
+                }
               } @else if (o.order.status === 'Pending' || o.order.status === 'CancelRequested') {
                 <span class="muted">{{ o.order.status === 'Pending' ? ('adm.waiting_payment' | t) : ('adm.asked_cancel' | t) }}</span>
                 <div class="row-buttons">
@@ -88,6 +91,23 @@
                 </div>
               } @else {
                 <span class="muted">{{ 'order.status.' + o.order.status | t }}</span>
+              }
+              @if (o.order.status === 'Paid') {
+                <form class="row-buttons awb-form" (submit)="$event.preventDefault(); saveTracking(o)">
+                  <input
+                    maxlength="64"
+                    [value]="trackingValue(o)"
+                    (input)="editTracking(o, $event)"
+                    [placeholder]="'adm.awb' | t"
+                    [attr.aria-label]="'adm.awb' | t"
+                  />
+                  <button class="secondary" type="submit" [disabled]="busy() === o.order.id || !trackingChanged(o)">
+                    {{ 'adm.save_awb' | t }}
+                  </button>
+                </form>
+                @if (trackingNotes()[o.order.id]; as note) {
+                  <span class="muted">{{ note }}</span>
+                }
               }
               <div class="row-buttons">
                 @if (confirmDelete() === o.order.id) {
