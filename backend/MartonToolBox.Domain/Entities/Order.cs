@@ -21,6 +21,11 @@ public sealed class Order
     public string? ShippingCity { get; set; }
     public string? ShippingCounty { get; set; }
     public string? ShippingPostalCode { get; set; }
+    /// <summary>The Sameday easybox the buyer chose (its Sameday locker id); null for delivery to the address. The Shipping* address fields then hold the locker's address.</summary>
+    public int? LockerId { get; set; }
+    /// <summary>"Card" (paid online through PayU before shipping) or "CashOnDelivery" (paid to the courier; address delivery only).</summary>
+    public string PaymentMethod { get; set; } = PaymentMethods.Card;
+    public string? LockerName { get; set; }
     // Delivery timeline, in order. An admin moves a paid order through these one step at a time.
     public DateTimeOffset? PaidAt { get; set; }
     public DateTimeOffset? PreparedAt { get; set; }
@@ -37,6 +42,12 @@ public sealed class Order
     public DateTimeOffset? TrackingCheckedAt { get; set; }
 }
 
+public static class PaymentMethods
+{
+    public const string Card = "Card";
+    public const string CashOnDelivery = "CashOnDelivery";
+}
+
 public static class OrderKinds
 {
     public const string License = "License";
@@ -47,9 +58,23 @@ public static class OrderKinds
 /// <summary>
 /// Order.Status values besides "Pending", "Paid" and "Failed". A buyer can ask to cancel an unpaid shop order
 /// (CancelRequested); an admin then cancels it (Cancelled), which hides it from the buyer's order list.
+/// Pay-on-delivery orders start as CashOnDelivery.
 /// </summary>
 public static class OrderStatuses
 {
     public const string CancelRequested = "CancelRequested";
     public const string Cancelled = "Cancelled";
+    /// <summary>A pay-on-delivery order: confirmed and shipped like a paid one; it becomes "Paid" when delivered (the courier collects the money).</summary>
+    public const string CashOnDelivery = "CashOnDelivery";
+
+    /// <summary>Orders that go through delivery: paid online, or confirmed to be paid on delivery.</summary>
+    public static bool Ships(string status) => status is "Paid" or CashOnDelivery;
+
+    /// <summary>Once a pay-on-delivery order is delivered the courier has the money, so it counts as paid from then on.</summary>
+    public static void SettleIfDelivered(Order order)
+    {
+        if (order.Status != CashOnDelivery || order.DeliveredAt is not { } at) return;
+        order.Status = "Paid";
+        order.PaidAt ??= at;
+    }
 }

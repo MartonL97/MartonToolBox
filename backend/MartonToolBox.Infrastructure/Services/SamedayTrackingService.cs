@@ -98,5 +98,6 @@ public static class CourierTimeline
             if (stage >= CourierStage.OutForDelivery) order.OutForDeliveryAt ??= e.At;
             if (stage >= CourierStage.Delivered) order.DeliveredAt ??= e.At;
         }
+        OrderStatuses.SettleIfDelivered(order);
     }
 }

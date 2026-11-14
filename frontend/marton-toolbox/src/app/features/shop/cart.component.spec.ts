@@ -93,4 +93,74 @@ describe('CartComponent', () => {
     await settle(fixture);
     expect(text(el.querySelector('.summary .error-text'))).toBe('Only 2 × MartonToolBox T-Shirt (size M) left in stock.');
   });
+  it('sends the easybox picked on the Sameday map instead of an address', async () => {
+    const locker = {
+      lockerId: 1234,
+      name: 'easybox Lidl Mănăștur',
+      address: 'Str. Primăverii 1',
+      city: 'Cluj-Napoca',
+      county: 'Cluj',
+      postalCode: '400000',
+    };
+    let picked: ((l: typeof locker) => void) | null = null;
+    const instance = { open: () => picked?.(locker), close: () => {}, subscribe: (cb: (l: typeof locker) => void) => (picked = cb) };
+    (window as unknown as { LockerPlugin: object }).LockerPlugin = {
+      init: () => {},
+      reinitializePlugin: () => {},
+      getInstance: () => instance,
+    };
+    try {
+      localStorage.removeItem('mtb_delivery');
+      const r = render(CartComponent, { user: TEST_USER });
+      TestBed.inject(CartService).add(MUG, null, 1);
+      r.http
+        .expectOne('/api/shop/products')
+        .flush({ data: { ...CATALOG, easybox: { clientId: 'c', apiUsername: 'shop', countryCode: 'RO' } } });
+      r.http.match('/api/account').forEach((req) => req.flush({ data: { isAdmin: false, profile: PROFILE } }));
+      await settle(r.fixture);
+      const el = r.el;
+      const button = (label: string) => Array.from(el.querySelectorAll('button')).find((b) => text(b) === label)!;
+
+      el.querySelectorAll<HTMLInputElement>('.delivery-choice input')[1].dispatchEvent(new Event('change'));
+      r.fixture.detectChanges();
+      expect(el.querySelector('input[autocomplete="street-address"]')).toBeNull();
+      expect(el.querySelector('input[name="payment"]')).toBeNull(); // easybox is card only
+      expect((el.querySelector('.summary button.primary') as HTMLButtonElement).disabled).toBeTrue();
+
+      click(button('Choose easybox on the map'));
+      await settle(r.fixture);
+      expect(text(el.querySelector('.easybox-selected strong'))).toBe('easybox Lidl Mănăștur');
+
+      click(el.querySelector('.summary button.primary') as HTMLButtonElement);
+      const req = r.http.expectOne('/api/shop/orders');
+      expect(req.request.body.paymentMethod).toBe('Card');
+      expect(req.request.body.shipping).toEqual({
+        name: PROFILE.displayName,
+        phone: PROFILE.phone,
+        address: locker.address,
+        city: locker.city,
+        county: locker.county,
+        postalCode: locker.postalCode,
+        lockerId: 1234,
+        lockerName: locker.name,
+      });
+    } finally {
+      delete (window as unknown as { LockerPlugin?: object }).LockerPlugin;
+      localStorage.removeItem('mtb_delivery');
+    }
+  });
+  it('places a pay-on-delivery order for address delivery and opens the order page', async () => {
+    localStorage.removeItem('mtb_delivery');
+    const { el, http, fixture } = await setup({ loggedIn: true });
+    const cod = el.querySelectorAll<HTMLInputElement>('input[name="payment"]')[1];
+    cod.dispatchEvent(new Event('change'));
+    fixture.detectChanges();
+    const pay = el.querySelector('.summary button.primary') as HTMLButtonElement;
+    expect(text(pay)).toBe('Place order · 202,00 RON on delivery');
+    click(pay);
+    const req = http.expectOne('/api/shop/orders');
+    expect(req.request.body.paymentMethod).toBe('CashOnDelivery');
+    expect(req.request.body.shipping.lockerId).toBeUndefined();
+    localStorage.removeItem('mtb_delivery');
+  });
 });

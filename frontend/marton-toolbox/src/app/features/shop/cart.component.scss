@@ -1,1 +1,49 @@
 // Page-specific styles. Shared design tokens and layout live in src/styles.scss.
+
+.delivery-choice {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 10px;
+  margin-bottom: 16px;
+}
+.delivery-choice label {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  cursor: pointer;
+}
+.delivery-choice label.active {
+  border-color: var(--brand);
+  box-shadow: 0 0 0 1px var(--brand) inset;
+}
+.delivery-choice input {
+  accent-color: var(--brand);
+  margin-top: 3px;
+}
+.delivery-choice span {
+  display: grid;
+  gap: 2px;
+}
+.delivery-choice small {
+  color: var(--text-3);
+}
+.easybox-pick {
+  display: grid;
+  gap: 10px;
+  justify-items: start;
+}
+.easybox-selected {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+.easybox-selected p {
+  margin: 2px 0 0;
+}
+
+.payment-title {
+  margin-top: 20px;
+}

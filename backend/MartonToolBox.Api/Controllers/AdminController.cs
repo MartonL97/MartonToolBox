@@ -145,7 +145,7 @@ public sealed class AdminController(AppDbContext db, PayUPaymentService payu, IC
         var sizes = await ShopController.LoadSizesAsync(db, products.Select(p => p.Id), ct);
         var reserved = await ShopController.LoadReservedAsync(db, window, ct);
         var toShip = await db.OrderItems
-            .Where(i => db.Orders.Any(o => o.Id == i.OrderId && o.Kind == OrderKinds.Shop && o.Status == "Paid" && o.ShippedAt == null))
+            .Where(i => db.Orders.Any(o => o.Id == i.OrderId && o.Kind == OrderKinds.Shop && (o.Status == "Paid" || o.Status == OrderStatuses.CashOnDelivery) && o.ShippedAt == null))
             .GroupBy(i => new { i.ProductId, i.VariantId })
             .Select(g => new { g.Key.ProductId, g.Key.VariantId, Quantity = g.Sum(i => i.Quantity) })
             .ToDictionaryAsync(r => (r.ProductId, r.VariantId), r => r.Quantity, ct);
@@ -198,6 +198,36 @@ public sealed class AdminController(AppDbContext db, PayUPaymentService payu, IC
     }
 
     /// <summary>
+    /// Marks an unpaid order as paid when the money arrived but PayU's callback never updated it. PayU is asked
+    /// first, so a payment it does know about goes through the normal path; otherwise the order is marked paid
+    /// here (stock is deducted the same way). An AWB can be added afterwards.
+    /// </summary>
+    [HttpPost("shop/orders/{orderId:guid}/mark-paid")]
+    public async Task<IActionResult> MarkPaid(Guid orderId, CancellationToken ct)
+    {
+        var order = await db.Orders.FirstOrDefaultAsync(o => o.Id == orderId && o.Kind == OrderKinds.Shop, ct);
+        if (order is null) return NotFound();
+        if (order.Status == "Paid") return Ok(new ApiResponse<string>(order.Status));
+        if (order.Status is not ("Pending" or OrderStatuses.CancelRequested)) return BadRequest(new { error = "Only orders awaiting payment can be marked as paid." });
+        if (await db.Payments.AnyAsync(p => p.OrderId == orderId, ct))
+        {
+            try { await payu.ConfirmOrderAsync(orderId, ct); }
+            catch (Exception ex) when (ex is HttpRequestException or InvalidOperationException)
+            {
+                logger.LogWarning(ex, "Could not check PayU before marking shop order {OrderId} as paid; marking it anyway.", orderId);
+            }
+        }
+        // PayU may have just cancelled it; the admin then has to look into it rather than force it through.
+        if (order.Status == "Failed") return Conflict(new { error = "PayU reports this payment as cancelled. Check the PayU panel before marking it paid." });
+        if (order.Status != "Paid")
+        {
+            await payu.MarkPaidAsync(order, ct);
+            logger.LogInformation("Shop order {OrderId} was marked as paid by an admin.", orderId);
+        }
+        return Ok(new ApiResponse<string>(order.Status));
+    }
+
+    /// <summary>
     /// Moves a paid order to its next delivery step. The caller names the step it means, so a double click or
     /// a stale page can't skip one.
     /// </summary>
@@ -206,7 +236,9 @@ public sealed class AdminController(AppDbContext db, PayUPaymentService payu, IC
     {
         var order = await db.Orders.FirstOrDefaultAsync(o => o.Id == orderId && o.Kind == OrderKinds.Shop, ct);
         if (order is null) return NotFound();
-        if (order.Status != "Paid") return BadRequest(new { error = "Only paid orders can move through delivery." });
+        if (!OrderStatuses.Ships(order.Status)) return BadRequest(new { error = "Only paid orders can move through delivery." });
+        // Shipping is read from the courier once the AWB is saved, not set by hand.
+        if (request.Stage == "Shipped") return BadRequest(new { error = "Save the AWB instead; the courier's status marks the order as shipped." });
         var steps = new (string Name, DateTimeOffset? At, Action<DateTimeOffset> Set)[]
         {
             ("Prepared", order.PreparedAt, t => order.PreparedAt = t),
@@ -218,6 +250,7 @@ public sealed class AdminController(AppDbContext db, PayUPaymentService payu, IC
         var next = Array.FindLastIndex(steps, s => s.At is not null) + 1;
         if (next == steps.Length || steps[next].Name != request.Stage) return Conflict(new { error = "This order has already moved on. Reload the page." });
         steps[next].Set(DateTimeOffset.UtcNow);
+        OrderStatuses.SettleIfDelivered(order);
         await db.SaveChangesAsync(ct);
         return Ok(new ApiResponse<string>(request.Stage));
     }
@@ -228,7 +261,7 @@ public sealed class AdminController(AppDbContext db, PayUPaymentService payu, IC
     {
         var order = await db.Orders.FirstOrDefaultAsync(o => o.Id == orderId && o.Kind == OrderKinds.Shop, ct);
         if (order is null) return NotFound();
-        if (order.Status != "Paid") return BadRequest(new { error = "Only paid orders can have an AWB." });
+        if (!OrderStatuses.Ships(order.Status)) return BadRequest(new { error = "Only paid orders can have an AWB." });
         order.TrackingNumber = string.IsNullOrWhiteSpace(request.TrackingNumber) ? null : request.TrackingNumber.Trim();
         order.TrackingCheckedAt = null;
         if (order.TrackingNumber is null)
@@ -261,6 +294,15 @@ public sealed class AdminController(AppDbContext db, PayUPaymentService payu, IC
     {
         var order = await db.Orders.FirstOrDefaultAsync(o => o.Id == orderId && o.Kind == OrderKinds.Shop, ct);
         if (order is null) return NotFound();
+        if (order.Status == OrderStatuses.CashOnDelivery)
+        {
+            // Not paid yet, so it can be called off until it leaves; its items go back to stock.
+            if (order.ShippedAt is not null) return BadRequest(new { error = "This order has already been handed to the courier." });
+            await RestockAsync(await db.OrderItems.Where(i => i.OrderId == orderId).ToListAsync(ct), ct);
+            order.Status = OrderStatuses.Cancelled;
+            await db.SaveChangesAsync(ct);
+            return Ok(new ApiResponse<string>(order.Status));
+        }
         if (order.Status is not ("Pending" or OrderStatuses.CancelRequested)) return BadRequest(new { error = "Only unpaid orders can be cancelled." });
         try
         {
@@ -286,23 +328,27 @@ public sealed class AdminController(AppDbContext db, PayUPaymentService payu, IC
         var order = await db.Orders.FirstOrDefaultAsync(o => o.Id == orderId && o.Kind == OrderKinds.Shop, ct);
         if (order is null) return NotFound();
         var items = await db.OrderItems.Where(i => i.OrderId == orderId).ToListAsync(ct);
-        if (order.Status == "Paid" && order.ShippedAt is null)
-        {
-            var productIds = items.Select(i => i.ProductId).ToList();
-            var products = await db.ShopProducts.Where(p => productIds.Contains(p.Id)).ToDictionaryAsync(p => p.Id, ct);
-            var variantIds = items.Where(i => i.VariantId != null).Select(i => i.VariantId!.Value).ToList();
-            var variants = await db.ShopProductVariants.Where(v => variantIds.Contains(v.Id)).ToDictionaryAsync(v => v.Id, ct);
-            foreach (var item in items)
-            {
-                if (item.VariantId is { } vid && variants.TryGetValue(vid, out var variant)) variant.Stock += item.Quantity;
-                else if (products.TryGetValue(item.ProductId, out var product)) product.Stock += item.Quantity;
-            }
-        }
+        // A pay-on-delivery order took its stock when it was placed, so it gives it back the same way.
+        if (OrderStatuses.Ships(order.Status) && order.ShippedAt is null) await RestockAsync(items, ct);
         db.OrderItems.RemoveRange(items);
         db.Payments.RemoveRange(await db.Payments.Where(p => p.OrderId == orderId).ToListAsync(ct));
         db.Orders.Remove(order);
         await db.SaveChangesAsync(ct);
         return Ok(new ApiResponse<Guid>(orderId));
+    }
+
+    /// <summary>Puts an order's items back into stock (not saved).</summary>
+    private async Task RestockAsync(IReadOnlyList<OrderItem> items, CancellationToken ct)
+    {
+        var productIds = items.Select(i => i.ProductId).ToList();
+        var products = await db.ShopProducts.Where(p => productIds.Contains(p.Id)).ToDictionaryAsync(p => p.Id, ct);
+        var variantIds = items.Where(i => i.VariantId != null).Select(i => i.VariantId!.Value).ToList();
+        var variants = await db.ShopProductVariants.Where(v => variantIds.Contains(v.Id)).ToDictionaryAsync(v => v.Id, ct);
+        foreach (var item in items)
+        {
+            if (item.VariantId is { } vid && variants.TryGetValue(vid, out var variant)) variant.Stock += item.Quantity;
+            else if (products.TryGetValue(item.ProductId, out var product)) product.Stock += item.Quantity;
+        }
     }
 
     private static void Apply(ShopProduct product, SaveProductRequest r)

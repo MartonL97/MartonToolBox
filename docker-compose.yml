@@ -39,6 +39,7 @@ services:
       Cors__Origin: http://localhost:4200
       Payments__Provider: ${PAYMENTS_PROVIDER:-PayU}
       Payments__AmountRon: ${PAYMENTS_AMOUNT_RON:-10}
+      Sameday__LockerPlugin__ApiUsername: ${SAMEDAY_API_USERNAME:-}
       Revolut__BaseUrl: ${REVOLUT_BASE_URL:-https://sandbox-merchant.revolut.com/}
       Revolut__ApiVersion: ${REVOLUT_API_VERSION:-2024-09-01}
       Revolut__SecretKey: ${REVOLUT_SECRET_KEY:-}

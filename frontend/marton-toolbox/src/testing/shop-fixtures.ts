@@ -27,4 +27,4 @@ export const MUG: ShopProduct = {
   stock: 10,
   sizes: [],
 };
-export const CATALOG: ShopCatalog = { products: [TSHIRT, MUG], shippingCost: 15, freeShippingOver: 200, currency: 'RON' };
+export const CATALOG: ShopCatalog = { products: [TSHIRT, MUG], shippingCost: 15, freeShippingOver: 200, currency: 'RON', easybox: null };

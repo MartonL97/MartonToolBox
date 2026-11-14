@@ -39,7 +39,7 @@ public sealed class AwbTrackingJob(IServiceScopeFactory scopes, IConfiguration c
         var cutoff = DateTimeOffset.UtcNow - TimeSpan.FromHours(configuration.GetValue<int?>("Sameday:CheckIntervalHours") ?? 12);
 
         var due = await db.Orders
-            .Where(o => o.Kind == OrderKinds.Shop && o.Status == "Paid" && o.TrackingNumber != null && o.DeliveredAt == null
+            .Where(o => o.Kind == OrderKinds.Shop && (o.Status == "Paid" || o.Status == OrderStatuses.CashOnDelivery) && o.TrackingNumber != null && o.DeliveredAt == null
                 && (o.TrackingCheckedAt == null || o.TrackingCheckedAt <= cutoff))
             .ToListAsync(ct);
 

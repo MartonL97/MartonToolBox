@@ -79,7 +79,7 @@ describe('AdminComponent', () => {
     ]);
   });
 
-  it('shows the order with its size and shipping address, and marks it shipped', async () => {
+  it('shows the order with its size and shipping address, and marks it ready for delivery', async () => {
     const { el, http, fixture } = await setup();
     expect(text(el)).toContain('1 × MartonToolBox T-Shirt — size M');
     expect(text(el)).toContain('400001 Cluj, Cluj');
@@ -93,7 +93,31 @@ describe('AdminComponent', () => {
     http.expectOne('/api/admin/shop/orders').flush({ data: [{ ...ORDER, order: { ...ORDER.order, preparedAt: '2026-10-27T12:00:00Z' } }] });
     await settle(fixture);
     expect(text(el)).toContain('Products ready for delivery · 27 Oct 2026');
-    expect(button('Mark as shipped')).toBeTruthy();
+    // Shipped comes from the courier once the AWB is saved, so there is no button for it.
+    expect(button('Mark as shipped')).toBeUndefined();
+  });
+
+  it('marks an order awaiting payment as paid after confirming', async () => {
+    const { el, http, fixture } = await setup();
+    const button = (label: string) => Array.from(el.querySelectorAll('button')).find((b) => text(b) === label);
+    fixture.componentInstance.load();
+    http.expectOne('/api/admin/licenses').flush({ data: [] });
+    http.expectOne('/api/admin/shop/orders').flush({ data: [{ ...ORDER, order: { ...ORDER.order, status: 'Pending' } }] });
+    http.expectOne('/api/admin/shop/products').flush({ data: [] });
+    http.expectOne('/api/admin/inventory').flush({ data: { rows: [], lowStockThreshold: 3, reservationMinutes: 30 } });
+    await settle(fixture);
+    expect(el.querySelector('.awb-form')).toBeNull();
+
+    click(button('Mark as paid'));
+    fixture.detectChanges();
+    click(button('Yes, it is paid'));
+    http.expectOne(`/api/admin/shop/orders/${ORDER.order.id}/mark-paid`).flush({ data: 'Paid' });
+    await settle(fixture);
+    http.expectOne('/api/admin/shop/orders').flush({ data: [ORDER] });
+    await settle(fixture);
+    http.expectOne('/api/admin/shop/products').flush({ data: [PRODUCT] });
+    await settle(fixture);
+    expect(el.querySelector('.awb-form')).toBeTruthy();
   });
 
   it('offers the last step after the courier, then nothing once finished', async () => {

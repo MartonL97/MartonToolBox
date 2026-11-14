@@ -15,6 +15,20 @@ public sealed class SamedayTrackingTests
         """;
 
     [Fact]
+    public void Pay_on_delivery_order_counts_as_paid_once_the_courier_delivers_it()
+    {
+        var order = new Order { Kind = OrderKinds.Shop, Status = OrderStatuses.CashOnDelivery, PaymentMethod = PaymentMethods.CashOnDelivery };
+        var at = new DateTimeOffset(2026, 11, 14, 10, 0, 0, TimeSpan.Zero);
+        CourierTimeline.Apply(order, [new CourierEvent("x", CourierStage.OutForDelivery, at)]);
+        Assert.Equal(OrderStatuses.CashOnDelivery, order.Status);
+        Assert.Null(order.PaidAt);
+
+        CourierTimeline.Apply(order, [new CourierEvent("x", CourierStage.Delivered, at.AddHours(2))]);
+        Assert.Equal("Paid", order.Status);
+        Assert.Equal(at.AddHours(2), order.PaidAt);
+    }
+
+    [Fact]
     public void Reads_a_registered_shipment_with_its_date_in_utc()
     {
         var e = Assert.Single(SamedayTrackingService.Parse(Registered));

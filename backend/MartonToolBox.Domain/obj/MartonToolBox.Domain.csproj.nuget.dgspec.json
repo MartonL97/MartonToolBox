@@ -63,11 +63,6 @@
           },
           "runtimeIdentifierGraphPath": "/Users/lakatosmarton/.dotnet/sdk/8.0.422/PortableRuntimeIdentifierGraph.json"
         }
-      },
-      "runtimes": {
-        "win-x64": {
-          "#import": []
-        }
       }
     }
   }

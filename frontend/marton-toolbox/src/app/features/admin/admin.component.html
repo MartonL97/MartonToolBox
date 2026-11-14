@@ -53,6 +53,13 @@
             </div>
             <div>
               <strong>{{ 'adm.ship_to' | t }}</strong>
+              @if (o.order.lockerName) {
+                <p>
+                  <span class="status-pill" data-status="shipped">easybox</span>
+                  <strong>{{ o.order.lockerName }}</strong>
+                  <span class="muted">(ID {{ o.order.lockerId }})</span>
+                </p>
+              }
               <p>
                 {{ o.shippingName }} · {{ o.shippingPhone }}
                 <br />
@@ -62,7 +69,15 @@
               </p>
             </div>
             <div class="order-actions">
-              @if (o.order.status === 'Paid') {
+              @if (cod(o.order)) {
+                <span class="status-pill" [attr.data-status]="o.order.status === 'Paid' ? 'shipped' : 'pending'">
+                  {{
+                    (o.order.status === 'Paid' ? 'adm.cod_collected' : 'adm.cod_collect')
+                      | t: { amount: money(o.order.amount, o.order.currency) }
+                  }}
+                </span>
+              }
+              @if (ships(o.order)) {
                 @if (lastStep(o.order); as step) {
                   <span class="muted">{{ 'order.step.' + step.key | t }} · {{ step.at | ldate: 'd MMM y' }}</span>
                 }
@@ -73,6 +88,19 @@
                 }
               } @else if (o.order.status === 'Pending' || o.order.status === 'CancelRequested') {
                 <span class="muted">{{ o.order.status === 'Pending' ? ('adm.waiting_payment' | t) : ('adm.asked_cancel' | t) }}</span>
+                <div class="row-buttons">
+                  @if (confirmPaid() === o.order.id) {
+                    <span class="muted">{{ 'adm.mark_paid_q' | t: { id: short(o.order.id) } }}</span>
+                    <button class="primary" (click)="markPaid(o)" [disabled]="busy() === o.order.id">
+                      {{ busy() === o.order.id ? ('adm.saving' | t) : ('adm.yes_mark_paid' | t) }}
+                    </button>
+                    <button class="secondary" (click)="confirmPaid.set(null)">{{ 'adm.cancel' | t }}</button>
+                  } @else {
+                    <button class="secondary" (click)="confirmPaid.set(o.order.id); confirmCancel.set(null)">
+                      {{ 'adm.mark_paid' | t }}
+                    </button>
+                  }
+                </div>
                 <div class="row-buttons">
                   @if (confirmCancel() === o.order.id) {
                     <span class="muted">{{ 'adm.cancel_q' | t: { id: short(o.order.id) } }}</span>
@@ -92,7 +120,20 @@
               } @else {
                 <span class="muted">{{ 'order.status.' + o.order.status | t }}</span>
               }
-              @if (o.order.status === 'Paid') {
+              @if (o.order.status === 'CashOnDelivery' && !o.order.shippedAt) {
+                <div class="row-buttons">
+                  @if (confirmCancel() === o.order.id) {
+                    <span class="muted">{{ 'adm.cancel_q' | t: { id: short(o.order.id) } }}</span>
+                    <button class="danger" (click)="cancelOrder(o)" [disabled]="busy() === o.order.id">
+                      {{ busy() === o.order.id ? ('adm.cancelling' | t) : ('adm.yes_cancel' | t) }}
+                    </button>
+                    <button class="secondary" (click)="confirmCancel.set(null)">{{ 'adm.keep' | t }}</button>
+                  } @else {
+                    <button class="secondary" (click)="confirmCancel.set(o.order.id)">{{ 'adm.cancel_order' | t }}</button>
+                  }
+                </div>
+              }
+              @if (ships(o.order)) {
                 <form class="row-buttons awb-form" (submit)="$event.preventDefault(); saveTracking(o)">
                   <input
                     maxlength="64"

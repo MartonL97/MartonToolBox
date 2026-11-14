@@ -1,6 +1,7 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
+import { EasyboxMapConfig } from './easybox-map';
 
 export interface ShopSize {
   id: string;
@@ -24,6 +25,8 @@ export interface ShopCatalog {
   shippingCost: number;
   freeShippingOver: number;
   currency: string;
+  /** Sameday's locker map settings; null hides the easybox option. */
+  easybox: EasyboxMapConfig | null;
 }
 export interface CartLine {
   productId: string;
@@ -37,7 +40,9 @@ export interface CartLine {
 export interface ShopOrder {
   id: string;
   /** CancelRequested: the buyer asked to cancel an unpaid order; Cancelled: an admin did. */
-  status: 'Pending' | 'Paid' | 'Failed' | 'CancelRequested' | 'Cancelled';
+  /** CashOnDelivery: confirmed, to be paid to the courier; it turns Paid once delivered. */
+  status: 'Pending' | 'Paid' | 'Failed' | 'CancelRequested' | 'Cancelled' | 'CashOnDelivery';
+  paymentMethod?: 'Card' | 'CashOnDelivery';
   amount: number;
   shippingCost: number;
   currency: string;
@@ -52,10 +57,22 @@ export interface ShopOrder {
   deliveredAt: string | null;
   /** The courier's AWB, once an admin has added it. */
   trackingNumber: string | null;
+  /** Set when the order goes to a Sameday easybox; the address fields are then the locker's. */
+  lockerId?: number | null;
+  lockerName?: string | null;
   items: { productName: string; size: string | null; unitPrice: number; quantity: number }[];
 }
 
-export const ORDER_STEPS = ['Placed', 'Paid', 'Prepared', 'Registered', 'Shipped', 'AtCourierDepot', 'OutForDelivery', 'Delivered'] as const;
+export const ORDER_STEPS = [
+  'Placed',
+  'Paid',
+  'Prepared',
+  'Registered',
+  'Shipped',
+  'AtCourierDepot',
+  'OutForDelivery',
+  'Delivered',
+] as const;
 export type OrderStep = (typeof ORDER_STEPS)[number];
 export interface OrderTimelineStep {
   key: OrderStep;
@@ -63,22 +80,46 @@ export interface OrderTimelineStep {
   done: boolean;
 }
 
-/** Every delivery step in order. Orders from before a step existed have no date for it, but still count it as done. */
-export function orderTimeline(o: ShopOrder): OrderTimelineStep[] {
-  const dates = [o.createdAt, o.paidAt, o.preparedAt, o.registeredAt, o.shippedAt, o.atCourierDepotAt, o.outForDeliveryAt, o.deliveredAt];
-  const latest = Math.max(o.status === 'Paid' ? 1 : 0, dates.reduce((last, at, i) => (at ? i : last), 0));
-  return ORDER_STEPS.map((key, i) => ({ key, at: dates[i] ?? null, done: i <= latest }));
+/** Orders that go through delivery: paid online, or confirmed to be paid on delivery. */
+export function ships(o: ShopOrder): boolean {
+  return o.status === 'Paid' || o.status === 'CashOnDelivery';
 }
 
-/** The step an admin can move a paid order to next; null when it's finished or unpaid. Saving an AWB sets Registered. */
+export function isCashOnDelivery(o: ShopOrder): boolean {
+  return o.paymentMethod === 'CashOnDelivery';
+}
+
+/**
+ * Every delivery step in order. Orders from before a step existed have no date for it, but still count it as done.
+ * A pay-on-delivery order has no online payment step: the courier collects the money on delivery.
+ */
+export function orderTimeline(o: ShopOrder): OrderTimelineStep[] {
+  const dates = [o.createdAt, o.paidAt, o.preparedAt, o.registeredAt, o.shippedAt, o.atCourierDepotAt, o.outForDeliveryAt, o.deliveredAt];
+  const latest = Math.max(
+    ships(o) ? 1 : 0,
+    dates.reduce((last, at, i) => (at ? i : last), 0),
+  );
+  const steps = ORDER_STEPS.map((key, i) => ({ key, at: dates[i] ?? null, done: i <= latest }));
+  return isCashOnDelivery(o) ? steps.filter((s) => s.key !== 'Paid') : steps;
+}
+
+/**
+ * The step an admin can move a paid order to next; null when it's finished or unpaid. Registered and Shipped come
+ * from the AWB (saving it, then the courier's status), so there is no button for them.
+ */
 export function nextOrderStep(o: ShopOrder): OrderStep | null {
-  return o.status === 'Paid' ? (orderTimeline(o).find((s) => !s.done && s.key !== 'Registered')?.key ?? null) : null;
+  if (!ships(o)) return null;
+  const next = orderTimeline(o).find((s) => !s.done)?.key ?? null;
+  return next === 'Registered' || next === 'Shipped' ? null : next;
 }
 
 /** The stage to show for an order: delivery progress once paid, otherwise its payment status. */
 export function orderStage(o: ShopOrder): string {
-  if (o.status !== 'Paid') return o.status;
-  const current = orderTimeline(o).filter((s) => s.done).pop()!.key;
+  if (!ships(o)) return o.status;
+  const current = orderTimeline(o)
+    .filter((s) => s.done)
+    .pop()!.key;
+  if (current === 'Placed') return 'CashOnDelivery';
   return current === 'Delivered' ? 'Finished' : current;
 }
 

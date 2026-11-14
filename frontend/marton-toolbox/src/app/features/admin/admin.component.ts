@@ -1,7 +1,7 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
-import { OrderStep, ShopOrder, money, nextOrderStep, orderStage, orderTimeline } from '../../core/shop/cart.service';
+import { OrderStep, ShopOrder, isCashOnDelivery, money, nextOrderStep, orderStage, orderTimeline, ships } from '../../core/shop/cart.service';
 import { I18nService } from '../../core/i18n/i18n.service';
 import { I18N } from '../../core/i18n/translate.pipe';
 
@@ -159,12 +159,16 @@ export class AdminComponent {
   confirmDelete = signal<string | null>(null);
   /** Order id awaiting a second click to confirm cancelling it. */
   confirmCancel = signal<string | null>(null);
+  /** Order id awaiting a second click to confirm marking it paid by hand. */
+  confirmPaid = signal<string | null>(null);
   /** Orders whose buyer asked to cancel; shown on the orders tab so they aren't missed. */
   cancelRequests = computed(() => this.shopOrders().filter((o) => o.order.status === 'CancelRequested').length);
   emptyProduct = emptyProduct;
   money = money;
   stage = orderStage;
   nextStep = nextOrderStep;
+  ships = ships;
+  cod = isCashOnDelivery;
 
   constructor() {
     this.load();
@@ -191,6 +195,17 @@ export class AdminComponent {
       await firstValueFrom(this.http.post(`/api/admin/shop/orders/${o.order.id}/cancel`, {}));
       this.confirmCancel.set(null);
       this.shopOrders.set(await this.get<AdminShopOrder[]>('/api/admin/shop/orders'));
+    });
+  }
+
+  /** For a payment PayU's callback never confirmed: the server checks PayU first, then marks the order paid. */
+  async markPaid(o: AdminShopOrder) {
+    await this.run(o.order.id, async () => {
+      await firstValueFrom(this.http.post(`/api/admin/shop/orders/${o.order.id}/mark-paid`, {}));
+      this.confirmPaid.set(null);
+      this.shopOrders.set(await this.get<AdminShopOrder[]>('/api/admin/shop/orders'));
+      // Stock is deducted once an order is paid.
+      this.products.set(await this.get<AdminProduct[]>('/api/admin/shop/products'));
     });
   }
 

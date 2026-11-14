@@ -1,13 +1,16 @@
 using System.Globalization;
 using System.Net;
+using System.Text;
 using System.Net.Http.Json;
 using System.Text.Json.Serialization;
+using MartonToolBox.Application.Email;
 using MartonToolBox.Application.Licensing;
 using MartonToolBox.Application.Payments;
 using MartonToolBox.Domain.Entities;
 using MartonToolBox.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 
 namespace MartonToolBox.Infrastructure.Services;
 
@@ -23,7 +26,7 @@ namespace MartonToolBox.Infrastructure.Services;
 /// (register at secure.snd.payu.com with Romania as main market) it charges in RON. With
 /// them empty it falls back to PayU's public sandbox POS, which only accepts PLN.
 /// </summary>
-public sealed class PayUPaymentService(HttpClient http, AppDbContext db, ILicenseService licenses, IConfiguration configuration) : IPaymentService
+public sealed class PayUPaymentService(HttpClient http, AppDbContext db, ILicenseService licenses, IEmailSender email, IConfiguration configuration, ILogger<PayUPaymentService> logger) : IPaymentService
 {
     public const string SandboxBaseUrl = "https://secure.snd.payu.com/";
     private const string PublicPosId = "300746";
@@ -171,37 +174,103 @@ public sealed class PayUPaymentService(HttpClient http, AppDbContext db, ILicens
             "CANCELED" => OrderState.Failed,
             _ => OrderState.Pending // NEW, PENDING, WAITING_FOR_CONFIRMATION
         };
-        // A cancellation request stays visible until an admin acts on it, unless PayU reaches a final state first.
-        order.Status = state switch { OrderState.Completed => "Paid", OrderState.Failed => "Failed", _ => order.Status == OrderStatuses.CancelRequested ? order.Status : "Pending" };
-
-        var licenseGranted = false;
-        if (state == OrderState.Completed && order.Kind == OrderKinds.Shop)
+        if (state == OrderState.Completed)
         {
-            // Reached once per order: a Paid order returns early above.
-            order.PaidAt = DateTimeOffset.UtcNow;
-            var items = await db.OrderItems.Where(i => i.OrderId == order.Id).ToListAsync(ct);
-            var ids = items.Select(i => i.ProductId).ToList();
-            var products = await db.ShopProducts.Where(p => ids.Contains(p.Id)).ToDictionaryAsync(p => p.Id, ct);
-            var variantIds = items.Where(i => i.VariantId != null).Select(i => i.VariantId!.Value).ToList();
-            var variants = await db.ShopProductVariants.Where(v => variantIds.Contains(v.Id)).ToDictionaryAsync(v => v.Id, ct);
-            foreach (var item in items)
-            {
-                // Sized items draw from their size's stock; others from the product's.
-                if (item.VariantId is { } vid && variants.TryGetValue(vid, out var variant)) variant.Stock = Math.Max(0, variant.Stock - item.Quantity);
-                else if (products.TryGetValue(item.ProductId, out var product)) product.Stock = Math.Max(0, product.Stock - item.Quantity);
-            }
+            var licenseGranted = await MarkPaidAsync(order, ct);
+            await NotifyPaymentAsync(order, ct);
+            return new OrderConfirmation(state, licenseGranted);
         }
-        else if (state == OrderState.Completed && order.Kind == OrderKinds.AiPack)
+        // A cancellation request stays visible until an admin acts on it, unless PayU reaches a final state first.
+        order.Status = state == OrderState.Failed ? "Failed" : order.Status == OrderStatuses.CancelRequested ? order.Status : "Pending";
+        await db.SaveChangesAsync(ct);
+        return new OrderConfirmation(state, false);
+    }
+
+    /// <summary>
+    /// Marks an unpaid order as paid and delivers what was bought: shop stock is deducted, an AI pack starts,
+    /// a license is granted. Used when PayU confirms the payment, and by an admin when PayU's callback never came.
+    /// Returns whether a license was granted.
+    /// </summary>
+    public async Task<bool> MarkPaidAsync(Order order, CancellationToken ct = default)
+    {
+        if (order.Status == "Paid") return false;
+        var wasCashOnDelivery = order.Status == OrderStatuses.CashOnDelivery;
+        order.Status = "Paid";
+        var licenseGranted = false;
+        if (order.Kind == OrderKinds.Shop)
+        {
+            order.PaidAt = DateTimeOffset.UtcNow;
+            // A confirmed pay-on-delivery order already took its stock when it was placed.
+            if (!wasCashOnDelivery) await DeductStockAsync(order, ct);
+        }
+        else if (order.Kind == OrderKinds.AiPack)
         {
             await AiQuotaService.ActivatePackAsync(db, order, DateTimeOffset.UtcNow, ct);
         }
-        else if (state == OrderState.Completed)
+        else
         {
             licenseGranted = await LicenseGrantor.GrantIfNeededAsync(db, licenses, order, ct);
         }
         await db.SaveChangesAsync(ct);
+        return licenseGranted;
+    }
 
-        return new OrderConfirmation(state, licenseGranted);
+    /// <summary>Takes a shop order's items out of stock (not saved). Sized items draw from their size's stock; others from the product's.</summary>
+    public async Task DeductStockAsync(Order order, CancellationToken ct = default)
+    {
+        var items = await db.OrderItems.Where(i => i.OrderId == order.Id).ToListAsync(ct);
+        var ids = items.Select(i => i.ProductId).ToList();
+        var products = await db.ShopProducts.Where(p => ids.Contains(p.Id)).ToDictionaryAsync(p => p.Id, ct);
+        var variantIds = items.Where(i => i.VariantId != null).Select(i => i.VariantId!.Value).ToList();
+        var variants = await db.ShopProductVariants.Where(v => variantIds.Contains(v.Id)).ToDictionaryAsync(v => v.Id, ct);
+        foreach (var item in items)
+        {
+            if (item.VariantId is { } vid && variants.TryGetValue(vid, out var variant)) variant.Stock = Math.Max(0, variant.Stock - item.Quantity);
+            else if (products.TryGetValue(item.ProductId, out var product)) product.Stock = Math.Max(0, product.Stock - item.Quantity);
+        }
+    }
+
+    /// <summary>
+    /// Emails the shop owner (Payments:NotifyEmail) about a successful payment, or about a new pay-on-delivery order
+    /// that is ready to ship. A failed send is logged, never thrown.
+    /// </summary>
+    public async Task NotifyPaymentAsync(Order order, CancellationToken ct = default)
+    {
+        var to = configuration["Payments:NotifyEmail"];
+        if (string.IsNullOrWhiteSpace(to)) return;
+        try
+        {
+            var buyer = await db.Users.Where(u => u.Id == order.UserId).Select(u => u.Email).FirstOrDefaultAsync(ct) ?? "unknown";
+            var shortId = order.Id.ToString("N")[..8].ToUpperInvariant();
+            var lines = new List<string>
+            {
+                $"Order: {shortId} ({order.Id})",
+                $"Type: {order.Kind}",
+                $"Amount: {order.Amount.ToString("0.00", CultureInfo.InvariantCulture)} {order.Currency}",
+                $"Buyer: {buyer}",
+            };
+            if (order.Kind == OrderKinds.Shop)
+            {
+                var items = await db.OrderItems.Where(i => i.OrderId == order.Id).ToListAsync(ct);
+                lines.Add("");
+                lines.AddRange(items.Select(i => $"{i.Quantity} x {i.ProductName}{(i.Size is null ? "" : $" (size {i.Size})")}"));
+                lines.Add("");
+                if (order.LockerId is not null) lines.Add($"easybox: {order.LockerName} (Sameday locker ID {order.LockerId})");
+                lines.Add($"Ship to: {order.ShippingName}, {order.ShippingPhone}");
+                lines.Add($"{order.ShippingAddress}, {order.ShippingPostalCode} {order.ShippingCity}, {order.ShippingCounty}");
+            }
+            var text = string.Join("\n", lines);
+            var cod = order.Status == OrderStatuses.CashOnDelivery;
+            var intro = cod ? $"New order to be paid on delivery: the courier collects {order.Amount.ToString("0.00", CultureInfo.InvariantCulture)} {order.Currency}." : "A payment has been completed.";
+            var html = new StringBuilder($"<p>{WebUtility.HtmlEncode(intro)}</p><p>");
+            foreach (var line in lines) html.Append(WebUtility.HtmlEncode(line)).Append("<br>");
+            html.Append("</p>");
+            await email.SendAsync(to.Trim(), "MartonToolBox", $"{(cod ? "New pay-on-delivery order" : "Payment received")}: order {shortId} ({order.Amount.ToString("0.00", CultureInfo.InvariantCulture)} {order.Currency})", html.ToString(), intro + "\n\n" + text, ct);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            logger.LogError(ex, "Could not send the payment notification for order {OrderId}.", order.Id);
+        }
     }
 
     /// <summary>

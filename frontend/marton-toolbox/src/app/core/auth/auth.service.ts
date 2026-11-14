@@ -1,5 +1,5 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import type { I18nService } from '../i18n/i18n.service';
 
@@ -35,14 +35,19 @@ export function extractAuthError(err: any, i18n?: I18nService): string {
   return 'Something went wrong. Please try again.';
 }
 
+const ADMIN_KEY = 'mtb_is_admin';
+
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   private http = inject(HttpClient);
   readonly token = signal(localStorage.getItem('mtb_token'));
   readonly user = signal<AuthUser | null>(JSON.parse(localStorage.getItem('mtb_user') ?? 'null'));
   readonly isAuthenticated = computed(() => !!this.token());
-  /** From /api/account; only used to show admin UI. The backend checks the role on every admin request. */
-  readonly isAdmin = signal(false);
+  /**
+   * From /api/account; only used to show admin UI. The backend checks the role on every admin request. Remembered with
+   * the session so the admin link shows straight away after a reload and survives a failed request.
+   */
+  readonly isAdmin = signal(!!localStorage.getItem('mtb_token') && localStorage.getItem(ADMIN_KEY) === '1');
 
   constructor() {
     if (this.token()) this.refreshProfile();
@@ -51,9 +56,21 @@ export class AuthService {
   async refreshProfile() {
     try {
       const res = await firstValueFrom(this.http.get<{ data: { isAdmin: boolean } }>('/api/account'));
-      this.isAdmin.set(!!res.data.isAdmin);
+      this.setAdmin(!!res.data.isAdmin);
+    } catch (err) {
+      // Only a definite "not signed in / not allowed" drops it; a network error or restarting server keeps what we knew.
+      const status = (err as HttpErrorResponse)?.status;
+      if (status === 401 || status === 403) this.setAdmin(false);
+    }
+  }
+
+  private setAdmin(isAdmin: boolean) {
+    this.isAdmin.set(isAdmin);
+    try {
+      if (isAdmin) localStorage.setItem(ADMIN_KEY, '1');
+      else localStorage.removeItem(ADMIN_KEY);
     } catch {
-      this.isAdmin.set(false);
+      /* not critical */
     }
   }
 
@@ -111,7 +128,7 @@ export class AuthService {
     localStorage.removeItem('mtb_user');
     this.token.set(null);
     this.user.set(null);
-    this.isAdmin.set(false);
+    this.setAdmin(false);
   }
 
   private setSession(result: AuthResult) {

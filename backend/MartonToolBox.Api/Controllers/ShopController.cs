@@ -14,7 +14,9 @@ namespace MartonToolBox.Api.Controllers;
 public sealed record ShopVariantDto(Guid Id, string Size, int Stock);
 /// <summary>Stock is the total across sizes when the product has sizes.</summary>
 public sealed record ShopProductDto(Guid Id, string Slug, string Name, string Description, decimal Price, string Currency, string? ImageUrl, int Stock, IReadOnlyList<ShopVariantDto> Sizes);
-public sealed record ShopCatalogDto(IReadOnlyList<ShopProductDto> Products, decimal ShippingCost, decimal FreeShippingOver, string Currency);
+/// <summary>Settings for Sameday's locker map (cdn.sameday.ro/locker-plugin). Null when no Sameday username is configured, which hides the easybox option.</summary>
+public sealed record EasyboxMapDto(string ClientId, string ApiUsername, string CountryCode);
+public sealed record ShopCatalogDto(IReadOnlyList<ShopProductDto> Products, decimal ShippingCost, decimal FreeShippingOver, string Currency, EasyboxMapDto? Easybox);
 public sealed record CartLineRequest(Guid ProductId, Guid? VariantId, [Range(1, 99)] int Quantity);
 public sealed record ShippingRequest(
     [Required, StringLength(120, MinimumLength = 2)] string Name,
@@ -22,10 +24,15 @@ public sealed record ShippingRequest(
     [Required, StringLength(250, MinimumLength = 5)] string Address,
     [Required, StringLength(80, MinimumLength = 2)] string City,
     [Required, StringLength(80, MinimumLength = 2)] string County,
-    [Required, StringLength(12, MinimumLength = 4)] string PostalCode);
-public sealed record PlaceOrderRequest([Required, MinLength(1)] IReadOnlyList<CartLineRequest> Items, [Required] ShippingRequest Shipping);
+    // Some easyboxes come without a postal code, so it is only required for delivery to an address (checked in PlaceOrder).
+    [StringLength(12)] string? PostalCode,
+    /// <summary>Set when the buyer picked an easybox on Sameday's map; the address fields are then the locker's.</summary>
+    [Range(1, int.MaxValue)] int? LockerId = null,
+    [StringLength(200)] string? LockerName = null);
+/// <summary>PaymentMethod is "Card" (PayU, the default) or "CashOnDelivery" (paid to the courier; not for easybox delivery).</summary>
+public sealed record PlaceOrderRequest([Required, MinLength(1)] IReadOnlyList<CartLineRequest> Items, [Required] ShippingRequest Shipping, string? PaymentMethod = null);
 public sealed record ShopOrderItemDto(string ProductName, string? Size, decimal UnitPrice, int Quantity);
-public sealed record ShopOrderDto(Guid Id, string Status, decimal Amount, decimal ShippingCost, string Currency, DateTimeOffset CreatedAt, DateTimeOffset? PaidAt, DateTimeOffset? PreparedAt, DateTimeOffset? RegisteredAt, DateTimeOffset? ShippedAt, DateTimeOffset? AtCourierDepotAt, DateTimeOffset? OutForDeliveryAt, DateTimeOffset? DeliveredAt, string? TrackingNumber, IReadOnlyList<ShopOrderItemDto> Items);
+public sealed record ShopOrderDto(Guid Id, string Status, decimal Amount, decimal ShippingCost, string Currency, DateTimeOffset CreatedAt, DateTimeOffset? PaidAt, DateTimeOffset? PreparedAt, DateTimeOffset? RegisteredAt, DateTimeOffset? ShippedAt, DateTimeOffset? AtCourierDepotAt, DateTimeOffset? OutForDeliveryAt, DateTimeOffset? DeliveredAt, string? TrackingNumber, IReadOnlyList<ShopOrderItemDto> Items, int? LockerId = null, string? LockerName = null, string PaymentMethod = PaymentMethods.Card);
 
 [ApiController, Route("api/shop")]
 public sealed class ShopController(AppDbContext db, PayUPaymentService payu, UserManager<AppUser> users, IConfiguration configuration, ILogger<ShopController> logger) : ControllerBase
@@ -34,6 +41,11 @@ public sealed class ShopController(AppDbContext db, PayUPaymentService payu, Use
     private decimal ShippingCost => configuration.GetValue<decimal?>("Shop:ShippingCost") ?? 15m;
     private decimal FreeShippingOver => configuration.GetValue<decimal?>("Shop:FreeShippingOver") ?? 200m;
     private TimeSpan ReservationWindow => ReservationWindowFrom(configuration);
+    /// <summary>The public client id Sameday's own shop plugins use for the locker map.</summary>
+    private const string SamedayLockerPluginClientId = "b8cb2ee3-41b9-4c3d-aafe-1527b453d65e";
+    private EasyboxMapDto? EasyboxMap => configuration["Sameday:LockerPlugin:ApiUsername"] is { Length: > 0 } username
+        ? new EasyboxMapDto(configuration["Sameday:LockerPlugin:ClientId"] is { Length: > 0 } id ? id : SamedayLockerPluginClientId, username.Trim().ToLowerInvariant(), configuration["Sameday:LockerPlugin:CountryCode"] ?? "RO")
+        : null;
 
     internal static TimeSpan ReservationWindowFrom(IConfiguration configuration) =>
         TimeSpan.FromMinutes(configuration.GetValue<int?>("Shop:ReservationMinutes") ?? 30);
@@ -45,7 +57,7 @@ public sealed class ShopController(AppDbContext db, PayUPaymentService payu, Use
         var sizes = await LoadSizesAsync(db, products.Select(p => p.Id), ct);
         var reserved = await LoadReservedAsync(db, ReservationWindow, ct);
         var dtos = products.Select(p => ToDto(p, sizes[p.Id].ToList(), reserved)).ToList();
-        return Ok(new ApiResponse<ShopCatalogDto>(new ShopCatalogDto(dtos, ShippingCost, FreeShippingOver, Currency)));
+        return Ok(new ApiResponse<ShopCatalogDto>(new ShopCatalogDto(dtos, ShippingCost, FreeShippingOver, Currency, EasyboxMap)));
     }
 
     /// <summary>Stock shown to shoppers is what's left after units held by unpaid checkouts.</summary>
@@ -115,17 +127,35 @@ public sealed class ShopController(AppDbContext db, PayUPaymentService payu, Use
         var subtotal = items.Sum(i => i.UnitPrice * i.Quantity);
         var shipping = subtotal >= FreeShippingOver ? 0m : ShippingCost;
         var s = request.Shipping;
+        if (s.LockerId is null && (s.PostalCode?.Trim().Length ?? 0) < 4) return BadRequest(new { error = "Please enter a valid postal code." });
+        if (s.LockerId is not null && (EasyboxMap is null || string.IsNullOrWhiteSpace(s.LockerName))) return BadRequest(new { error = "Please choose an easybox on the map." });
+        var paymentMethod = request.PaymentMethod ?? PaymentMethods.Card;
+        if (paymentMethod is not (PaymentMethods.Card or PaymentMethods.CashOnDelivery)) return BadRequest(new { error = "Unknown payment method." });
+        var cashOnDelivery = paymentMethod == PaymentMethods.CashOnDelivery;
+        if (cashOnDelivery && s.LockerId is not null) return BadRequest(new { error = "Pay on delivery is only available for delivery to an address." });
         var order = new Order
         {
             UserId = user.Id, Kind = OrderKinds.Shop, Product = "Shop", Currency = Currency, Status = "Pending",
             Amount = subtotal + shipping, ShippingCost = shipping,
             ShippingName = s.Name.Trim(), ShippingPhone = s.Phone.Trim(), ShippingAddress = s.Address.Trim(),
-            ShippingCity = s.City.Trim(), ShippingCounty = s.County.Trim(), ShippingPostalCode = s.PostalCode.Trim()
+            ShippingCity = s.City.Trim(), ShippingCounty = s.County.Trim(), ShippingPostalCode = s.PostalCode?.Trim() ?? string.Empty,
+            LockerId = s.LockerId, LockerName = s.LockerId is null ? null : s.LockerName!.Trim(),
+            PaymentMethod = paymentMethod
         };
         foreach (var item in items) item.OrderId = order.Id;
         db.Orders.Add(order);
         db.OrderItems.AddRange(items);
         await db.SaveChangesAsync(ct);
+
+        if (cashOnDelivery)
+        {
+            // Nothing to pay online: the order is confirmed now and its items leave stock, as with a paid order.
+            order.Status = OrderStatuses.CashOnDelivery;
+            await payu.DeductStockAsync(order, ct);
+            await db.SaveChangesAsync(ct);
+            await payu.NotifyPaymentAsync(order, ct);
+            return Ok(new ApiResponse<CheckoutSession>(new CheckoutSession(order.Id, $"/shop/orders/{order.Id}", order.Amount, order.Currency)));
+        }
 
         try
         {
@@ -189,7 +219,7 @@ public sealed class ShopController(AppDbContext db, PayUPaymentService payu, Use
         var ids = orders.Select(o => o.Id).ToList();
         var items = (await db.OrderItems.Where(i => ids.Contains(i.OrderId)).ToListAsync(ct)).ToLookup(i => i.OrderId);
         return orders.Select(o => new ShopOrderDto(o.Id, o.Status, o.Amount, o.ShippingCost, o.Currency, o.CreatedAt, o.PaidAt, o.PreparedAt, o.RegisteredAt, o.ShippedAt, o.AtCourierDepotAt, o.OutForDeliveryAt, o.DeliveredAt, o.TrackingNumber,
-            items[o.Id].Select(i => new ShopOrderItemDto(i.ProductName, i.Size, i.UnitPrice, i.Quantity)).ToList())).ToList();
+            items[o.Id].Select(i => new ShopOrderItemDto(i.ProductName, i.Size, i.UnitPrice, i.Quantity)).ToList(), o.LockerId, o.LockerName, o.PaymentMethod)).ToList();
     }
 
     private Task<List<ShopOrderDto>> LoadOrdersAsync(IQueryable<Order> query, CancellationToken ct) => LoadOrdersAsync(db, query, ct);

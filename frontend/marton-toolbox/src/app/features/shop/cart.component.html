@@ -54,14 +54,32 @@
         <form class="panel" (submit)="checkout($event)">
           <h3>
             <mtb-icon name="truck" />
-            {{ 'cart.shipping_address' | t }}
+            {{ 'cart.delivery' | t }}
           </h3>
+          @if (cart.catalog()?.easybox) {
+            <div class="delivery-choice" role="radiogroup" [attr.aria-label]="'cart.delivery' | t">
+              <label [class.active]="!easyboxOn()">
+                <input type="radio" name="delivery" [checked]="!easyboxOn()" (change)="setDelivery('address')" />
+                <span>
+                  <strong>{{ 'cart.to_address' | t }}</strong>
+                  <small>{{ 'cart.to_address_hint' | t }}</small>
+                </span>
+              </label>
+              <label [class.active]="easyboxOn()">
+                <input type="radio" name="delivery" [checked]="easyboxOn()" (change)="setDelivery('easybox')" />
+                <span>
+                  <strong>{{ 'cart.to_easybox' | t }}</strong>
+                  <small>{{ 'cart.to_easybox_hint' | t }}</small>
+                </span>
+              </label>
+            </div>
+          }
           <div class="form-grid">
             <label class="span-2">
               {{ 'cart.full_name' | t }}
               <input autocomplete="name" [value]="shipping().name" (input)="set('name', $event)" required />
             </label>
-            <label>
+            <label [class.span-2]="easyboxOn()">
               {{ 'cart.phone' | t }}
               <input
                 type="tel"
@@ -72,29 +90,70 @@
                 required
               />
             </label>
-            <label>
-              {{ 'cart.postal_code' | t }}
-              <input autocomplete="postal-code" [value]="shipping().postalCode" (input)="set('postalCode', $event)" required />
-            </label>
-            <label class="span-2">
-              {{ 'cart.street' | t }}
-              <input
-                autocomplete="street-address"
-                [placeholder]="'cart.street_hint' | t"
-                [value]="shipping().address"
-                (input)="set('address', $event)"
-                required
-              />
-            </label>
-            <label>
-              {{ 'cart.city' | t }}
-              <input autocomplete="address-level2" [value]="shipping().city" (input)="set('city', $event)" required />
-            </label>
-            <label>
-              {{ 'cart.county' | t }}
-              <input autocomplete="address-level1" [value]="shipping().county" (input)="set('county', $event)" required />
-            </label>
+            @if (easyboxOn()) {
+              <div class="span-2 easybox-pick">
+                @if (easybox(); as box) {
+                  <div class="easybox-selected">
+                    <mtb-icon name="package" />
+                    <div>
+                      <strong>{{ box.name }}</strong>
+                      <p class="muted">{{ box.address }}, {{ box.city }}{{ box.county ? ', ' + box.county : '' }}</p>
+                    </div>
+                  </div>
+                }
+                <button type="button" [class]="easybox() ? 'secondary' : 'primary'" (click)="chooseEasybox()" [disabled]="mapLoading()">
+                  {{ mapLoading() ? ('cart.map_loading' | t) : easybox() ? ('cart.change_easybox' | t) : ('cart.choose_easybox' | t) }}
+                </button>
+              </div>
+            } @else {
+              <label>
+                {{ 'cart.postal_code' | t }}
+                <input autocomplete="postal-code" [value]="shipping().postalCode" (input)="set('postalCode', $event)" required />
+              </label>
+              <label class="span-2">
+                {{ 'cart.street' | t }}
+                <input
+                  autocomplete="street-address"
+                  [placeholder]="'cart.street_hint' | t"
+                  [value]="shipping().address"
+                  (input)="set('address', $event)"
+                  required
+                />
+              </label>
+              <label>
+                {{ 'cart.city' | t }}
+                <input autocomplete="address-level2" [value]="shipping().city" (input)="set('city', $event)" required />
+              </label>
+              <label>
+                {{ 'cart.county' | t }}
+                <input autocomplete="address-level1" [value]="shipping().county" (input)="set('county', $event)" required />
+              </label>
+            }
           </div>
+          <h3 class="payment-title">
+            <mtb-icon name="cart" />
+            {{ 'cart.payment' | t }}
+          </h3>
+          @if (easyboxOn()) {
+            <p class="muted">{{ 'cart.easybox_card_only' | t }}</p>
+          } @else {
+            <div class="delivery-choice" role="radiogroup" [attr.aria-label]="'cart.payment' | t">
+              <label [class.active]="!cashOnDelivery()">
+                <input type="radio" name="payment" [checked]="!cashOnDelivery()" (change)="setPayment('Card')" />
+                <span>
+                  <strong>{{ 'cart.pay_card' | t }}</strong>
+                  <small>{{ 'cart.pay_card_hint' | t }}</small>
+                </span>
+              </label>
+              <label [class.active]="cashOnDelivery()">
+                <input type="radio" name="payment" [checked]="cashOnDelivery()" (change)="setPayment('CashOnDelivery')" />
+                <span>
+                  <strong>{{ 'cart.pay_cod' | t }}</strong>
+                  <small>{{ 'cart.pay_cod_hint' | t }}</small>
+                </span>
+              </label>
+            </div>
+          }
           <button type="submit" hidden></button>
         </form>
       </div>
@@ -121,10 +180,14 @@
         }
         @if (auth.isAuthenticated()) {
           <button class="primary block" [disabled]="busy() || !formValid()" (click)="checkout()">
-            {{ busy() ? ('cart.redirecting' | t) : ('cart.pay' | t: { amount: money(total()) }) }}
+            {{
+              busy()
+                ? ((cashOnDelivery() ? 'cart.placing' : 'cart.redirecting') | t)
+                : ((cashOnDelivery() ? 'cart.place_cod' : 'cart.pay') | t: { amount: money(total()) })
+            }}
           </button>
           @if (!formValid()) {
-            <p class="hint">{{ 'cart.fill_address' | t }}</p>
+            <p class="hint">{{ (easyboxOn() ? 'cart.fill_easybox' : 'cart.fill_address') | t }}</p>
           }
         } @else {
           <a class="primary block" routerLink="/login" [queryParams]="{ returnUrl: '/shop/cart' }">{{ 'cart.login_to_checkout' | t }}</a>

@@ -262,11 +262,21 @@ namespace MartonToolBox.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(20)")
                         .HasDefaultValue("License");
 
+                    b.Property<int?>("LockerId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("LockerName")
+                        .HasColumnType("text");
+
                     b.Property<DateTimeOffset?>("OutForDeliveryAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<DateTimeOffset?>("PaidAt")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("PaymentMethod")
+                        .IsRequired()
+                        .HasColumnType("text");
 
                     b.Property<DateTimeOffset?>("PreparedAt")
                         .HasColumnType("timestamp with time zone");

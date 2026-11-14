@@ -61,7 +61,7 @@ export class ShopOrderComponent implements OnDestroy {
     try {
       const res = await firstValueFrom(this.http.post<{ data: ShopOrder }>(`/api/shop/orders/${this.orderId}/confirm`, {}));
       this.order.set(res.data);
-      if (res.data.status === 'Paid') {
+      if (res.data.status === 'Paid' || res.data.status === 'CashOnDelivery') {
         this.cart.clear();
         return;
       }

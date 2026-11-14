@@ -51,6 +51,22 @@ describe('AuthService', () => {
     expect(localStorage.getItem('mtb_token')).toBeNull();
   });
 
+  it('shows admin straight away after a reload and keeps it through a failed request', async () => {
+    logIn();
+    localStorage.setItem('mtb_is_admin', '1');
+    const auth = create();
+    expect(auth.isAdmin()).toBeTrue();
+    http.expectOne('/api/account').flush(null, { status: 0, statusText: 'Unknown Error' });
+    await Promise.resolve();
+    expect(auth.isAdmin()).toBeTrue();
+
+    const check = auth.refreshProfile();
+    http.expectOne('/api/account').flush(null, { status: 401, statusText: 'Unauthorized' });
+    await check;
+    expect(auth.isAdmin()).toBeFalse();
+    expect(localStorage.getItem('mtb_is_admin')).toBeNull();
+  });
+
   it('register sends the password confirmation and does not sign in', async () => {
     const auth = create();
     const result = auth.register('Maria', 'maria@example.com', 'Passw0rd!', 'Passw0rd!');

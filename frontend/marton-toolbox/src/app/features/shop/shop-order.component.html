@@ -18,6 +18,17 @@
           </p>
         </div>
       </div>
+    } @else if (o.status === 'CashOnDelivery') {
+      <div class="status-banner success">
+        <mtb-icon name="check" />
+        <div>
+          <h1>{{ 'order.thanks' | t }}</h1>
+          <p class="lead">
+            {{ 'order.cod_text' | t: { amount: money(o.amount, o.currency) } }}
+            {{ (o.shippedAt ? 'order.shipped' : 'order.will_ship') | t }}
+          </p>
+        </div>
+      </div>
     } @else if (o.status === 'Failed') {
       <div class="status-banner error">
         <mtb-icon name="cart" />
@@ -52,7 +63,7 @@
       </div>
     }
 
-    @if (o.status === 'Paid' || o.status === 'Pending') {
+    @if (o.status === 'Paid' || o.status === 'Pending' || o.status === 'CashOnDelivery') {
       <mtb-order-timeline [order]="o" />
     }
 
@@ -72,6 +83,9 @@
         <span>{{ 'common.shipping' | t }}</span>
         <span>{{ o.shippingCost === 0 ? ('common.free' | t) : money(o.shippingCost, o.currency) }}</span>
       </div>
+      @if (o.lockerName) {
+        <p class="muted easybox-line">{{ 'order.easybox' | t: { name: o.lockerName } }}</p>
+      }
       <div class="summary-row total">
         <span>{{ 'common.total' | t }}</span>
         <span>{{ money(o.amount, o.currency) }}</span>
