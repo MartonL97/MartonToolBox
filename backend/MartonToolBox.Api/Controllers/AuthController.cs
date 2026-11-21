@@ -138,7 +138,7 @@ public sealed class AuthController(
     [HttpPost("refresh")]
     public ActionResult<ApiResponse<AuthResult>> Refresh(RefreshRequest request) => StatusCode(StatusCodes.Status501NotImplemented, new { error = "Refresh-token persistence is prepared for the next auth hardening pass." });
 
-    private AuthResult CreateResult(AppUser user) { var (token, expiry) = tokens.CreateAccessToken(user); return new AuthResult(token, tokens.CreateRefreshToken(), expiry, new UserDto(user.Id, user.Email!, user.DisplayName)); }
+    private AuthResult CreateResult(AppUser user) { var (token, expiry) = tokens.CreateAccessToken(user); return new AuthResult(token, tokens.CreateRefreshToken(), expiry, UserDto.From(user)); }
 
     private static string CooldownKey(string kind, string emailAddress) => $"{kind}-mail:" + emailAddress.Trim().ToUpperInvariant();
 

@@ -13,7 +13,26 @@
 
   @if (account(); as a) {
     <div class="profile-head">
-      <span class="big-avatar">{{ initial() }}</span>
+      <div class="avatar-edit">
+        <span class="big-avatar">
+          @if (a.user.avatarUrl) {
+            <img [src]="a.user.avatarUrl" [alt]="'acct.avatar_alt' | t" />
+          } @else {
+            {{ initial() }}
+          }
+        </span>
+        <div class="avatar-actions">
+          <label class="secondary avatar-pick" [class.disabled]="avatarBusy()">
+            {{ (a.user.avatarUrl ? 'acct.avatar_change' : 'acct.avatar_add') | t }}
+            <input type="file" [accept]="avatarAccept" [disabled]="avatarBusy()" (change)="uploadAvatar($event)" />
+          </label>
+          @if (a.user.avatarUrl) {
+            <button type="button" class="avatar-remove" [disabled]="avatarBusy()" (click)="removeAvatar()">
+              {{ 'acct.avatar_remove' | t }}
+            </button>
+          }
+        </div>
+      </div>
       <div>
         <p class="eyebrow">{{ 'acct.eyebrow' | t }}</p>
         <h1>{{ a.profile.displayName }}</h1>
@@ -26,6 +45,9 @@
             <span class="status-pill" data-status="paid">{{ 'nav.admin' | t }}</span>
           }
         </div>
+        @if (avatarError()) {
+          <p class="error-text">{{ avatarError() }}</p>
+        }
       </div>
     </div>
 

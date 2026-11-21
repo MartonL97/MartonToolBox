@@ -98,6 +98,29 @@ public sealed class OpenAiChatServiceTests
     }
 
     [Fact]
+    public async Task Sends_the_reasoning_effort_for_gpt_oss()
+    {
+        var (service, handler) = Create(_ => Sse("ok"), new() { ["Llm:Model"] = "gpt-oss-20b", ["Llm:ReasoningEffort"] = "low" });
+        await Collect(service.StreamReplyAsync(Hello));
+        using var json = JsonDocument.Parse(handler.Requests[0].Body!);
+        var kwargs = json.RootElement.GetProperty("chat_template_kwargs");
+        Assert.Equal("low", kwargs.GetProperty("reasoning_effort").GetString());
+        Assert.False(kwargs.TryGetProperty("enable_thinking", out _));
+    }
+
+    [Fact]
+    public async Task Tells_the_model_the_current_date_and_adds_the_context()
+    {
+        var (service, handler) = Create(_ => Sse("ok"), new() { ["Llm:Model"] = "gemma-3n-e4b", ["Llm:TimeZone"] = "UTC" });
+        await Collect(service.StreamReplyAsync(Hello, context: "[1] Weather in Cluj: 7 °C"));
+        using var json = JsonDocument.Parse(handler.Requests[0].Body!);
+        var system = json.RootElement.GetProperty("messages")[0].GetProperty("content").GetString()!;
+        Assert.Contains("Current date and time: " + DateTime.UtcNow.ToString("dddd", System.Globalization.CultureInfo.InvariantCulture), system);
+        Assert.Contains("(UTC)", system);
+        Assert.EndsWith("[1] Weather in Cluj: 7 °C", system);
+    }
+
+    [Fact]
     public async Task Ignores_reasoning_content_and_hides_inline_think_tags()
     {
         var events =

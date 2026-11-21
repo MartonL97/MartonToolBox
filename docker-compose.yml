@@ -6,8 +6,8 @@ services:
   llm:
     image: ghcr.io/ggml-org/llama.cpp:server
     environment:
-      LLAMA_ARG_HF_REPO: ${LLM_HF_MODEL:-Qwen/Qwen3-4B-GGUF:Q4_K_M}   # any GGUF model on Hugging Face, as repo:quantization
-      LLAMA_ARG_ALIAS: ${LLM_MODEL:-qwen3-4b}                         # the name the API reports; must match the backend's Llm__Model
+      LLAMA_ARG_HF_REPO: ${LLM_HF_MODEL:-unsloth/gemma-3n-E4B-it-GGUF:Q4_K_M}   # any GGUF model on Hugging Face, as repo or repo:quantization
+      LLAMA_ARG_ALIAS: ${LLM_MODEL:-gemma-3n-e4b}                             # the name the API reports; must match the backend's Llm__Model
       LLAMA_ARG_CTX_SIZE: ${LLM_CONTEXT:-8192}                        # shared by all parallel slots
       LLAMA_ARG_N_PARALLEL: ${LLM_PARALLEL:-1}                        # chats answered at the same time
       LLAMA_ARG_JINJA: "true"
@@ -59,7 +59,9 @@ services:
       Frontend__BaseUrl: ${FRONTEND_BASE_URL:-http://localhost:4200}
       Backend__BaseUrl: ${BACKEND_BASE_URL:-http://localhost:8080}
       Llm__BaseUrl: ${LLM_BASE_URL:-http://llm:8080}
-      Llm__Model: ${LLM_MODEL:-qwen3-4b}
+      Llm__Model: ${LLM_MODEL:-gemma-3n-e4b}
+      Llm__ReasoningEffort: ${LLM_REASONING_EFFORT:-}
+      Search__BaseUrl: ${SEARCH_BASE_URL:-}                           # SearXNG for "Search the web" (see setup-searxng.ps1); empty = off
       Llm__ApiKey: ${LLM_API_KEY:-}
     depends_on: [postgres, llm]
     ports: ["8080:8080"]

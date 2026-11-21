@@ -8,14 +8,23 @@ import { IconComponent } from '../../core/ui/icon.component';
 import { I18nService } from '../../core/i18n/i18n.service';
 import { I18N } from '../../core/i18n/translate.pipe';
 
+/** A web page a reply is based on; the model cites them as [1], [2] in list order. */
+export interface WebSource {
+  title: string;
+  url: string;
+}
 export interface ChatTurn {
   role: 'user' | 'assistant';
   content: string;
+  /** Web search results the reply was given (assistant turns with web search only). */
+  sources?: WebSource[];
 }
 export interface AiStatus {
   available: boolean;
   model: string;
   problem: string | null;
+  /** The server has a search engine set up (Search:BaseUrl). */
+  webSearch?: boolean;
 }
 
 /** The user's allowance over a rolling 24 hours (see AiQuotaRules on the server). Shown only as a percentage. */
@@ -60,6 +69,7 @@ export const MAX_MESSAGE_CHARS = 8000;
 const MAX_TOTAL_CHARS = 32000;
 const MAX_MESSAGES = 40;
 const STORAGE_KEY = 'mtb_ai_chat';
+const WEB_KEY = 'mtb_ai_web';
 
 /** Keys of the example prompts (shown and sent in the user's language). */
 export const SUGGESTIONS = ['ai.s1', 'ai.s2', 'ai.s3', 'ai.s4'];
@@ -90,6 +100,10 @@ export class AiAssistantComponent implements OnDestroy {
   draft = signal('');
   streaming = signal(false);
   error = signal('');
+  /** The user's choice to search the web before answering (remembered in this browser). */
+  webSearch = signal(loadFlag(WEB_KEY));
+  /** Search is on and the server supports it. */
+  searching = computed(() => this.webSearch() && !!this.status()?.webSearch);
 
   readonly money = money;
   usage = signal<AiUsage | null>(null);
@@ -148,6 +162,11 @@ export class AiAssistantComponent implements OnDestroy {
       this.refreshingUsage = true;
       this.loadUsage().finally(() => (this.refreshingUsage = false));
     }
+  }
+
+  toggleWebSearch() {
+    this.webSearch.update((v) => !v);
+    saveFlag(WEB_KEY, this.webSearch());
   }
 
   togglePacks() {
@@ -288,11 +307,14 @@ export class AiAssistantComponent implements OnDestroy {
       const res = await fetch('/api/ai/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...(this.auth.token() ? { Authorization: `Bearer ${this.auth.token()}` } : {}) },
-        body: JSON.stringify({ messages: history }),
+        // Only role and content: the sources stay in the browser.
+        body: JSON.stringify({ messages: history.map(({ role, content }) => ({ role, content })), webSearch: this.searching() }),
         signal: abort.signal,
       });
       if (!res.ok) throw await chatError(res, this.i18n);
       if (!res.body) throw new ChatError(0, this.i18n.t('ai.unreadable'));
+      const sources = readSources(res.headers.get('X-Sources'));
+      if (sources.length) this.setReplySources(sources);
 
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
@@ -335,6 +357,10 @@ export class AiAssistantComponent implements OnDestroy {
       // The server counts the reply's real tokens once it ends (also from other tabs and devices).
       if (received) this.loadUsage();
     }
+  }
+
+  private setReplySources(sources: WebSource[]) {
+    this.messages.update((list) => [...list.slice(0, -1), { ...list[list.length - 1], sources }]);
   }
 
   private appendToReply(piece: string) {
@@ -403,13 +429,52 @@ export function trimHistory(list: ChatTurn[]): ChatTurn[] {
   return kept;
 }
 
+/** The X-Sources header: base64 of UTF-8 JSON [{title, url}]. Anything unreadable or not http(s) is dropped. */
+export function readSources(header: string | null): WebSource[] {
+  if (!header) return [];
+  try {
+    const bytes = Uint8Array.from(atob(header), (c) => c.charCodeAt(0));
+    return cleanSources(JSON.parse(new TextDecoder().decode(bytes)));
+  } catch {
+    return [];
+  }
+}
+
+function cleanSources(list: unknown): WebSource[] {
+  if (!Array.isArray(list)) return [];
+  return list
+    .filter((s) => typeof s?.title === 'string' && typeof s?.url === 'string' && /^https?:\/\//i.test(s.url))
+    .map((s) => ({ title: s.title, url: s.url }));
+}
+
 /** The conversation survives navigating between tools (per browser tab), not closing the tab. */
 function loadChat(): ChatTurn[] {
   try {
     const list = JSON.parse(sessionStorage.getItem(STORAGE_KEY) ?? '[]');
-    return Array.isArray(list) ? list.filter((m) => (m?.role === 'user' || m?.role === 'assistant') && typeof m.content === 'string') : [];
+    if (!Array.isArray(list)) return [];
+    return list
+      .filter((m) => (m?.role === 'user' || m?.role === 'assistant') && typeof m.content === 'string')
+      .map((m) => {
+        const sources = cleanSources(m.sources);
+        return sources.length ? { role: m.role, content: m.content, sources } : { role: m.role, content: m.content };
+      });
   } catch {
     return [];
+  }
+}
+
+function loadFlag(key: string): boolean {
+  try {
+    return localStorage.getItem(key) === '1';
+  } catch {
+    return false;
+  }
+}
+function saveFlag(key: string, on: boolean) {
+  try {
+    localStorage.setItem(key, on ? '1' : '0');
+  } catch {
+    /* storage blocked */
   }
 }
 function saveChat(list: ChatTurn[]) {

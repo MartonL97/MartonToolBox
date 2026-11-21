@@ -35,6 +35,10 @@ docker compose logs -f llm               # download / loading progress
 curl http://localhost:8081/health        # {"status":"ok"} when ready
 ```
 
+On the Windows server (Docker Desktop, no compose), `powershell -ExecutionPolicy Bypass -File .\setup-llm.ps1` does everything: it limits Docker's memory (`-Memory`, default 10GB), restarts Docker, replaces the `llm` container with the chosen model (`-HfModel repo:quant -Alias name`, default Gemma 3n E4B), waits for the download, tests it and deletes the old model files. Add `-NoRestart` to only switch the model.
+
+**Web search** (optional): `powershell -ExecutionPolicy Bypass -File .\setup-searxng.ps1` runs [SearXNG](https://docs.searxng.org) in Docker on `127.0.0.1:8888` with JSON output on. Set `Search:BaseUrl` to `http://localhost:8888` and the AI Assistant shows a **Search the web** button: the backend searches the user's message first, gives the model the top 5 results, and the page lists them as sources under the reply. The model is also always told the current date and time (`Llm:TimeZone`, default `Europe/Bucharest`).
+
 - **Mac:** Docker can't use the Apple GPU, so the model runs on the CPU (slower). Give Docker Desktop at least 6 GB of memory (Settings → Resources).
 - **Windows 10/11 Pro server:** install the NVIDIA driver and Docker Desktop (WSL2 backend), then use the GPU command above. Docker Desktop only starts after a user logs in, so set up automatic login for unattended restarts.
 - The port is bound to `127.0.0.1` only. To require a key anyway, set `LLM_API_KEY` (compose passes it to both the server and the backend).
@@ -43,13 +47,14 @@ curl http://localhost:8081/health        # {"status":"ok"} when ready
 
 | Variable | Default | Meaning |
 |---|---|---|
-| `LLM_HF_MODEL` | `Qwen/Qwen3-4B-GGUF:Q4_K_M` | Hugging Face GGUF repo and quantization, e.g. `Qwen/Qwen3-14B-GGUF:Q4_K_M` for a 16 GB+ GPU |
-| `LLM_MODEL` | `qwen3-4b` | Name the server reports; the backend uses the same variable |
+| `LLM_HF_MODEL` | `unsloth/gemma-3n-E4B-it-GGUF:Q4_K_M` | Hugging Face GGUF repo, plus `:quantization` when it has several files. Gemma 3n E4B needs about 5 GB of RAM; `ggml-org/gpt-oss-20b-GGUF` is smarter and about as fast on a CPU but needs 32 GB in the server |
+| `LLM_MODEL` | `gemma-3n-e4b` | Name the server reports; the backend uses the same variable |
+| `LLM_REASONING_EFFORT` | empty | gpt-oss only: reasoning depth (`low`, `medium`, `high`); low answers fastest |
 | `LLM_CONTEXT` | `8192` | Context tokens, shared by all parallel chats (use `LLM_PARALLEL × 8192`) |
 | `LLM_PARALLEL` | `1` | Chats answered at the same time (e.g. `4` on a GPU server) |
 | `LLM_API_KEY` | empty | Optional Bearer key |
 
-**Backend settings** (`appsettings.json` → `Llm`): `BaseUrl` (`http://localhost:8081` for `./start.sh`, `http://llm:8080` inside compose), `Model`, `Think` (`false` skips Qwen3's reasoning for faster replies; empty for models without that switch), `ApiKey`, `SystemPrompt`. Any OpenAI-compatible server works (vLLM, LM Studio, a hosted API).
+**Backend settings** (`appsettings.json` → `Llm`): `BaseUrl` (`http://localhost:8081` for `./start.sh`, `http://llm:8080` inside compose), `Model`, `ReasoningEffort` (gpt-oss only: `low`, `medium` or `high`), `Think` (`false` skips Qwen3's reasoning for faster replies; leave out for other models), `ApiKey`, `SystemPrompt`. Any OpenAI-compatible server works (vLLM, LM Studio, a hosted API).
 
 **Daily limits and AI packs** (`appsettings.json` → `AiQuota`): usage is measured in tokens (prompt + reply, as llama.cpp reports them at the end of each reply; a reply stopped half way is estimated at about 4 characters per token), but users only ever see a percentage. Every licensed user gets `BasicDailyTokens` (default 25,000) per rolling 24 hours; nothing counts until the model starts answering. Users can buy a bigger pack on the AI Assistant page (`Packs`: `Id`, `Name`, `DailyTokens`, `Days`, `Price`; default Plus 125,000 and Pro 500,000 for 30 days, shown as "5×" and "20×" the Basic allowance, in `Currency`, default RON). Payment goes through PayU like the shop, and PayU returns the buyer to `/tools/ai-assistant?aiOrder=…`, where the pack is confirmed and switched on. A pack's terms are saved with its order, so later changes don't affect it. Buying the pack you already have adds its days after the current ones. The page shows a live progress bar and, near or at the limit, when the allowance frees up.
 

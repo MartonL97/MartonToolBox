@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { AccountComponent } from './account.component';
+import { AccountComponent, MAX_AVATAR_BYTES } from './account.component';
 import { AuthService } from '../../core/auth/auth.service';
 import { TEST_USER, flushAll, render, settle, text, type } from '../../../testing/test-helpers';
 
@@ -87,5 +87,44 @@ describe('AccountComponent', () => {
     });
     expect(text(el.querySelector('.license-key'))).toBe('MTB-ABC');
     expect(text(el.querySelector('.head-badges'))).toContain('Admin');
+  });
+  function pick(el: HTMLElement, file: File) {
+    const input = el.querySelector('.avatar-pick input') as HTMLInputElement;
+    Object.defineProperty(input, 'files', { value: [file], configurable: true });
+    input.dispatchEvent(new Event('change'));
+  }
+
+  it('uploads a profile picture and shows it on the page and in the header', async () => {
+    const { el, fixture, http } = await setup();
+    pick(el, new File([new Uint8Array([0xff, 0xd8, 0xff])], 'me.jpg', { type: 'image/jpeg' }));
+
+    const req = http.expectOne('/api/account/avatar');
+    expect(req.request.method).toBe('PUT');
+    expect((req.request.body as FormData).get('file')).toBeTruthy();
+    req.flush({ data: { ...TEST_USER, avatarUrl: '/api/account/avatar/u-1?v=1' } });
+    await settle(fixture);
+
+    expect(el.querySelector('.big-avatar img')?.getAttribute('src')).toBe('/api/account/avatar/u-1?v=1');
+    expect(TestBed.inject(AuthService).user()?.avatarUrl).toBe('/api/account/avatar/u-1?v=1');
+    expect(text(el.querySelector('.avatar-pick'))).toContain('Change picture');
+  });
+
+  it('refuses a picture over 2 MB without uploading it', async () => {
+    const { el, fixture, http } = await setup();
+    pick(el, new File([new Uint8Array(MAX_AVATAR_BYTES + 1)], 'big.png', { type: 'image/png' }));
+    await settle(fixture);
+    http.expectNone('/api/account/avatar');
+    expect(text(el.querySelector('.error-text'))).toBe('The picture must be 2 MB or smaller.');
+  });
+
+  it('removes the profile picture', async () => {
+    const { el, fixture, http } = await setup({ ...ACCOUNT, user: { ...TEST_USER, avatarUrl: '/api/account/avatar/u-1?v=1' } });
+    (el.querySelector('.avatar-remove') as HTMLButtonElement).click();
+    const req = http.expectOne('/api/account/avatar');
+    expect(req.request.method).toBe('DELETE');
+    req.flush({ data: { ...TEST_USER, avatarUrl: null } });
+    await settle(fixture);
+    expect(el.querySelector('.big-avatar img')).toBeNull();
+    expect(TestBed.inject(AuthService).user()?.avatarUrl).toBeNull();
   });
 });

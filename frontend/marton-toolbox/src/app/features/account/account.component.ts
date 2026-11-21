@@ -1,7 +1,7 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Router, RouterLink } from '@angular/router';
-import { firstValueFrom } from 'rxjs';
+import { Observable, firstValueFrom } from 'rxjs';
 import { AuthService } from '../../core/auth/auth.service';
 import { IconComponent } from '../../core/ui/icon.component';
 import { I18nService } from '../../core/i18n/i18n.service';
@@ -26,7 +26,7 @@ export interface Profile {
   memberSince: string;
 }
 interface AccountData {
-  user: { id: string; email: string; displayName: string };
+  user: { id: string; email: string; displayName: string; avatarUrl: string | null };
   license: License | null;
   isAdmin: boolean;
   profile: Profile;
@@ -35,6 +35,10 @@ type Field = 'displayName' | 'phone' | 'address' | 'city' | 'county' | 'postalCo
 type Form = Record<Field, string>;
 
 /** Fields counted for "profile complete" (company details are optional and not counted). */
+/** Same limit as the server: 2 MB. */
+export const MAX_AVATAR_BYTES = 2 * 1024 * 1024;
+const AVATAR_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+
 const COMPLETENESS: Field[] = ['displayName', 'phone', 'address', 'city', 'county', 'postalCode'];
 
 @Component({
@@ -56,6 +60,9 @@ export class AccountComponent {
   saving = signal(false);
   saved = signal(false);
   saveError = signal('');
+  avatarBusy = signal(false);
+  avatarError = signal('');
+  readonly avatarAccept = AVATAR_TYPES.join(',');
 
   dirty = computed(() => JSON.stringify(this.form()) !== JSON.stringify(this.savedForm()));
   initial = computed(() => (this.form().displayName || this.account()?.profile.email || '?').trim().charAt(0).toUpperCase());
@@ -106,6 +113,39 @@ export class AccountComponent {
       this.saveError.set(e.error?.error ? this.i18n.server(e.error.error) : fieldErrors || this.i18n.t('acct.save_failed'));
     } finally {
       this.saving.set(false);
+    }
+  }
+
+  async uploadAvatar(event: Event) {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    input.value = ''; // so picking the same file again still fires
+    if (!file || this.avatarBusy()) return;
+    this.avatarError.set('');
+    if (!AVATAR_TYPES.includes(file.type)) return this.avatarError.set(this.i18n.t('acct.avatar_type'));
+    if (file.size > MAX_AVATAR_BYTES) return this.avatarError.set(this.i18n.t('acct.avatar_too_big'));
+    const body = new FormData();
+    body.append('file', file);
+    await this.changeAvatar(this.http.put<{ data: AccountData['user'] }>('/api/account/avatar', body));
+  }
+
+  async removeAvatar() {
+    if (this.avatarBusy()) return;
+    this.avatarError.set('');
+    await this.changeAvatar(this.http.delete<{ data: AccountData['user'] }>('/api/account/avatar'));
+  }
+
+  private async changeAvatar(request: Observable<{ data: AccountData['user'] }>) {
+    this.avatarBusy.set(true);
+    try {
+      const res = await firstValueFrom(request);
+      this.account.update((a) => a && { ...a, user: res.data });
+      this.auth.updateAvatar(res.data.avatarUrl);
+    } catch (err) {
+      const e = err as HttpErrorResponse;
+      this.avatarError.set(e.status === 413 ? this.i18n.t('acct.avatar_too_big') : this.i18n.server(e.error?.error, 'acct.avatar_failed'));
+    } finally {
+      this.avatarBusy.set(false);
     }
   }
 

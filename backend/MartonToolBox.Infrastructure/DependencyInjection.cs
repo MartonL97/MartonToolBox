@@ -55,6 +55,14 @@ public static class DependencyInjection
                 client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", key);
         });
 
+        // Web search for the AI Assistant through a self-hosted SearXNG. Search:BaseUrl empty = no web search.
+        services.AddHttpClient<IWebSearch, SearxngSearchService>((sp, client) =>
+        {
+            var baseUrl = sp.GetRequiredService<IConfiguration>()["Search:BaseUrl"] is { Length: > 0 } url ? url : "http://localhost:8888";
+            client.BaseAddress = new Uri(baseUrl.TrimEnd('/') + "/");
+            client.Timeout = TimeSpan.FromSeconds(12);
+        });
+
         // Registered unconditionally so its notify endpoint works regardless
         // of which provider is the active default below.
         services.AddHttpClient<PayUPaymentService>((sp, client) =>

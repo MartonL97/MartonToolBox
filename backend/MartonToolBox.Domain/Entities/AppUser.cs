@@ -16,5 +16,8 @@ public sealed class AppUser : IdentityUser<Guid>
     public string? PostalCode { get; set; }
     public string? CompanyName { get; set; }
     public string? TaxId { get; set; }
+
+    /// <summary>When the profile picture (in UserAvatars) last changed; null when the user has none.</summary>
+    public DateTimeOffset? AvatarUpdatedAt { get; set; }
     public ICollection<License> Licenses { get; set; } = new List<License>();
 }

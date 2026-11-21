@@ -121,8 +121,17 @@
                 <i></i>
                 <i></i>
                 <i></i>
-                <em>{{ 'ai.thinking' | t }}</em>
+                <em>{{ (searching() && !m.sources ? 'ai.searching' : 'ai.thinking') | t }}</em>
               </span>
+            }
+            @if (m.sources?.length) {
+              <ol class="sources" [attr.aria-label]="'ai.sources' | t">
+                @for (s of m.sources; track $index) {
+                  <li>
+                    <a [href]="s.url" target="_blank" rel="noopener noreferrer nofollow" [title]="s.url">{{ s.title }}</a>
+                  </li>
+                }
+              </ol>
             }
           </div>
         </div>
@@ -145,6 +154,19 @@
     }
 
     <div class="composer">
+      @if (status()?.webSearch) {
+        <button
+          type="button"
+          class="web-toggle"
+          [class.on]="webSearch()"
+          [attr.aria-pressed]="webSearch()"
+          [title]="'ai.web_title' | t"
+          (click)="toggleWebSearch()"
+        >
+          <mtb-icon name="search" />
+          <span>{{ 'ai.web' | t }}</span>
+        </button>
+      }
       <textarea
         #input
         rows="1"

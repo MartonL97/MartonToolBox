@@ -23,7 +23,7 @@ builder.Services.AddHostedService<AwbTrackingJob>();
 builder.Services.AddMemoryCache();
 builder.Services.AddControllers().AddJsonOptions(options => options.JsonSerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter()));
 builder.Services.AddEndpointsApiExplorer(); builder.Services.AddSwaggerGen();
-builder.Services.AddCors(options => options.AddDefaultPolicy(policy => policy.WithOrigins(builder.Configuration["Cors:Origin"] ?? "http://localhost:4200").AllowAnyHeader().AllowAnyMethod()));
+builder.Services.AddCors(options => options.AddDefaultPolicy(policy => policy.WithOrigins(builder.Configuration["Cors:Origin"] ?? "http://localhost:4200").AllowAnyHeader().AllowAnyMethod().WithExposedHeaders(MartonToolBox.Api.Controllers.AiController.SourcesHeader)));
 builder.Services.AddRateLimiter(options => options.AddFixedWindowLimiter("api", x => { x.PermitLimit = 100; x.Window = TimeSpan.FromMinutes(1); }));
 var jwt = builder.Configuration.GetSection("Jwt");
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(options => options.TokenValidationParameters = new TokenValidationParameters { ValidateIssuer = true, ValidIssuer = jwt["Issuer"], ValidateAudience = true, ValidAudience = jwt["Audience"], ValidateLifetime = true, ValidateIssuerSigningKey = true, IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwt["Key"]!)), ClockSkew = TimeSpan.FromMinutes(1) });

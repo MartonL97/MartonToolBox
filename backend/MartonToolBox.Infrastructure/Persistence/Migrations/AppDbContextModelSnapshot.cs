@@ -104,6 +104,9 @@ namespace MartonToolBox.Infrastructure.Persistence.Migrations
                         .HasMaxLength(250)
                         .HasColumnType("character varying(250)");
 
+                    b.Property<DateTimeOffset?>("AvatarUpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<string>("City")
                         .HasMaxLength(80)
                         .HasColumnType("character varying(80)");
@@ -544,6 +547,28 @@ namespace MartonToolBox.Infrastructure.Persistence.Migrations
                     b.ToTable("ToolUsages");
                 });
 
+            modelBuilder.Entity("MartonToolBox.Domain.Entities.UserAvatar", b =>
+                {
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)");
+
+                    b.Property<byte[]>("Data")
+                        .IsRequired()
+                        .HasColumnType("bytea");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("UserId");
+
+                    b.ToTable("UserAvatars");
+                });
+
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole<System.Guid>", b =>
                 {
                     b.Property<Guid>("Id")
@@ -683,6 +708,15 @@ namespace MartonToolBox.Infrastructure.Persistence.Migrations
                         .IsRequired();
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("MartonToolBox.Domain.Entities.UserAvatar", b =>
+                {
+                    b.HasOne("MartonToolBox.Domain.Entities.AppUser", null)
+                        .WithOne()
+                        .HasForeignKey("MartonToolBox.Domain.Entities.UserAvatar", "UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<System.Guid>", b =>

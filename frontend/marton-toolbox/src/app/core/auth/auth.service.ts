@@ -7,6 +7,8 @@ export interface AuthUser {
   id: string;
   email: string;
   displayName: string;
+  /** Address of the profile picture; null or missing when the user has none. */
+  avatarUrl?: string | null;
 }
 interface AuthResult {
   accessToken: string;
@@ -55,8 +57,10 @@ export class AuthService {
 
   async refreshProfile() {
     try {
-      const res = await firstValueFrom(this.http.get<{ data: { isAdmin: boolean } }>('/api/account'));
+      const res = await firstValueFrom(this.http.get<{ data: { isAdmin: boolean; user?: AuthUser } }>('/api/account'));
       this.setAdmin(!!res.data.isAdmin);
+      // Picks up a name or picture changed on another device.
+      if (res.data.user && this.user()) this.storeUser({ ...this.user()!, ...res.data.user });
     } catch (err) {
       // Only a definite "not signed in / not allowed" drops it; a network error or restarting server keeps what we knew.
       const status = (err as HttpErrorResponse)?.status;
@@ -117,10 +121,18 @@ export class AuthService {
   /** Keeps the header/avatar in sync after the user renames themselves on the account page. */
   updateDisplayName(displayName: string) {
     const user = this.user();
-    if (!user) return;
-    const updated = { ...user, displayName };
-    localStorage.setItem('mtb_user', JSON.stringify(updated));
-    this.user.set(updated);
+    if (user) this.storeUser({ ...user, displayName });
+  }
+
+  /** Shows a newly uploaded (or removed) profile picture in the header straight away. */
+  updateAvatar(avatarUrl: string | null) {
+    const user = this.user();
+    if (user) this.storeUser({ ...user, avatarUrl });
+  }
+
+  private storeUser(user: AuthUser) {
+    localStorage.setItem('mtb_user', JSON.stringify(user));
+    this.user.set(user);
   }
 
   logout() {

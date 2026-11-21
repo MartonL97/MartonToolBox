@@ -79,9 +79,36 @@ describe('AiAssistantComponent', () => {
     const [url, init] = fetchSpy.calls.mostRecent().args as [string, RequestInit];
     expect(url).toBe('/api/ai/chat');
     expect((init.headers as Record<string, string>)['Authorization']).toBe('Bearer test-token');
-    expect(JSON.parse(init.body as string)).toEqual({ messages: [{ role: 'user', content: 'Hi there' }] });
+    expect(JSON.parse(init.body as string)).toEqual({ messages: [{ role: 'user', content: 'Hi there' }], webSearch: false });
+    expect(r.el.querySelector('.web-toggle')).toBeNull();
     expect((r.el.querySelector('textarea') as HTMLTextAreaElement).value).toBe('');
     expect(text(r.el.querySelector('.hint'))).toContain('Model: qwen3-4b');
+  });
+
+  it('searches the web when switched on and lists the sources under the reply', async () => {
+    localStorage.removeItem('mtb_ai_web');
+    const r = await setup({ available: true, model: 'gemma-3n-e4b', problem: null, webSearch: true } as never);
+    click(r.el.querySelector('.web-toggle'));
+    r.fixture.detectChanges();
+    expect(r.el.querySelector('.web-toggle')?.getAttribute('aria-pressed')).toBe('true');
+
+    const sources = [
+      { title: 'Vremea în Cluj', url: 'https://meteo.example/cluj' },
+      { title: 'Bad', url: 'javascript:alert(1)' },
+    ];
+    const header = btoa(String.fromCharCode(...new TextEncoder().encode(JSON.stringify(sources))));
+    const reply = streamed(['7 °C in Cluj [1].']);
+    reply.headers.set('X-Sources', header);
+    fetchSpy.and.resolveTo(reply);
+    await sendMessage(r, 'weather in Cluj?');
+
+    const [, init] = fetchSpy.calls.mostRecent().args as [string, RequestInit];
+    expect(JSON.parse(init.body as string).webSearch).toBeTrue();
+    const links = Array.from(r.el.querySelectorAll<HTMLAnchorElement>('.sources a'));
+    expect(links.map((a) => [a.textContent?.trim(), a.getAttribute('href')])).toEqual([['Vremea în Cluj', 'https://meteo.example/cluj']]);
+    expect(links[0].rel).toContain('noopener');
+    expect(localStorage.getItem('mtb_ai_web')).toBe('1');
+    localStorage.removeItem('mtb_ai_web');
   });
 
   it('sends Enter but not Shift+Enter', async () => {

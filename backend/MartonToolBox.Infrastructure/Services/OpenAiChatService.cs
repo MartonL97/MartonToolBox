@@ -12,11 +12,14 @@ namespace MartonToolBox.Infrastructure.Services;
 /// <summary>
 /// Talks to any OpenAI-compatible chat server (/v1/models, /v1/chat/completions). The app runs llama.cpp's llama-server
 /// in Docker (see docker-compose.yml); vLLM, LM Studio or a hosted API work the same way.
-/// Configured by the "Llm" section: BaseUrl (default http://localhost:8081), Model, Think, ApiKey and SystemPrompt.
+/// Configured by the "Llm" section: BaseUrl (default http://localhost:8081), Model, Think, ReasoningEffort, ApiKey, SystemPrompt
+/// and TimeZone (for the current date and time the model is told; default Europe/Bucharest).
 /// </summary>
-public sealed class OpenAiChatService(HttpClient http, IConfiguration config, ILogger<OpenAiChatService> logger) : IChatService
+public sealed class OpenAiChatService(HttpClient http, IConfiguration config, ILogger<OpenAiChatService> logger, TimeProvider? clock = null) : IChatService
 {
-    public const string DefaultModel = "qwen3-4b";
+    public const string DefaultTimeZone = "Europe/Bucharest";
+
+    public const string DefaultModel = "gemma-3n-e4b";
     public const string DefaultSystemPrompt =
         "You are the MartonToolBox assistant. Help the user with everyday work: writing, summarizing, explaining, " +
         "data and spreadsheets, documents and files. Be concise and practical. Answer in the language the user writes in.";
@@ -55,18 +58,22 @@ public sealed class OpenAiChatService(HttpClient http, IConfiguration config, IL
         }
     }
 
-    public async IAsyncEnumerable<string> StreamReplyAsync(IReadOnlyList<ChatMessage> messages, ChatUsageMeter? usage = null, [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    public async IAsyncEnumerable<string> StreamReplyAsync(IReadOnlyList<ChatMessage> messages, ChatUsageMeter? usage = null, string? context = null, [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
-        var think = config.GetValue<bool?>("Llm:Think");
+        // Both go to the model's chat template; a model ignores a switch its template doesn't use.
+        // Think: Qwen3-style models reason before answering unless told not to.
+        // ReasoningEffort: gpt-oss always reasons, at "low", "medium" (its default) or "high" depth; low answers fastest.
+        // The reasoning never reaches the user either way (it arrives as reasoning_content, which is ignored).
+        var kwargs = new Dictionary<string, object>();
+        if (config.GetValue<bool?>("Llm:Think") is { } think) kwargs["enable_thinking"] = think;
+        if (config["Llm:ReasoningEffort"] is { Length: > 0 } effort) kwargs["reasoning_effort"] = effort;
         var body = new ChatRequest(
             Model,
-            [new("system", config["Llm:SystemPrompt"] is { Length: > 0 } p ? p : DefaultSystemPrompt), .. messages.Select(m => new WireMessage(m.Role, m.Content))],
+            [new("system", SystemPrompt(context)), .. messages.Select(m => new WireMessage(m.Role, m.Content))],
             Stream: true,
             // Ask for token counts in a last chunk (prompt + reply); the daily allowance is measured in tokens.
             StreamOptions: new StreamOptions(IncludeUsage: true),
-            // Qwen3-style models reason before answering unless told not to; off by default so replies start right away.
-            // The reasoning never reaches the user either way (it arrives as reasoning_content, which is ignored).
-            ChatTemplateKwargs: think is null ? null : new Dictionary<string, object> { ["enable_thinking"] = think.Value });
+            ChatTemplateKwargs: kwargs.Count > 0 ? kwargs : null);
 
         using var request = new HttpRequestMessage(HttpMethod.Post, "v1/chat/completions") { Content = JsonContent.Create(body, options: Json) };
         HttpResponseMessage response;
@@ -128,6 +135,19 @@ public sealed class OpenAiChatService(HttpClient http, IConfiguration config, IL
                 yield return text;
             }
         }
+    }
+
+    /// <summary>The configured prompt, the current date and time (the model doesn't know them), and any extra context.</summary>
+    private string SystemPrompt(string? context)
+    {
+        var prompt = config["Llm:SystemPrompt"] is { Length: > 0 } p ? p : DefaultSystemPrompt;
+        var zoneId = config["Llm:TimeZone"] is { Length: > 0 } z ? z : DefaultTimeZone;
+        TimeZoneInfo zone;
+        try { zone = TimeZoneInfo.FindSystemTimeZoneById(zoneId); }
+        catch (Exception ex) when (ex is TimeZoneNotFoundException or InvalidTimeZoneException) { zone = TimeZoneInfo.Utc; zoneId = "UTC"; }
+        var now = TimeZoneInfo.ConvertTime((clock ?? TimeProvider.System).GetUtcNow(), zone);
+        var text = $"{prompt}\n\nCurrent date and time: {now.ToString("dddd, d MMMM yyyy, HH:mm", System.Globalization.CultureInfo.InvariantCulture)} ({zoneId}).";
+        return context is { Length: > 0 } ? $"{text}\n\n{context}" : text;
     }
 
     private static async Task<string> SafeReadAsync(HttpResponseMessage response, CancellationToken ct)

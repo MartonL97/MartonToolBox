@@ -15,6 +15,57 @@
   place-items: center;
   font: 800 30px var(--display);
   box-shadow: 0 14px 30px -14px rgba(79, 70, 229, 0.8);
+  overflow: hidden;
+}
+.big-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.avatar-edit {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+}
+.avatar-actions {
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+}
+.secondary.avatar-pick {
+  position: relative;
+  padding: 6px 12px;
+  font-size: 12px;
+  cursor: pointer;
+}
+/* The real file input stays usable by keyboard and screen readers but is drawn by its label. */
+.avatar-pick input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  overflow: hidden;
+}
+.avatar-pick:focus-within {
+  box-shadow: var(--ring);
+}
+.avatar-remove {
+  border: 0;
+  background: none;
+  padding: 0;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--danger);
+  cursor: pointer;
+}
+.avatar-remove:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.avatar-actions label.disabled {
+  opacity: 0.6;
+  pointer-events: none;
 }
 .profile-head h1 {
   margin: 0 0 4px;

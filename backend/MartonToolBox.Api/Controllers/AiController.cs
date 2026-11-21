@@ -13,7 +13,9 @@ using Microsoft.EntityFrameworkCore;
 
 namespace MartonToolBox.Api.Controllers;
 
-public sealed record ChatRequestDto(IReadOnlyList<ChatMessage>? Messages);
+/// <summary>WebSearch: search the web for the last message first and give the model the results.</summary>
+public sealed record ChatRequestDto(IReadOnlyList<ChatMessage>? Messages, bool WebSearch = false);
+
 /// <summary>Users see their allowance only as a percentage; token counts stay on the server.</summary>
 public sealed record AiQuotaDto(int PercentUsed, bool LimitReached, string Plan, string PlanName, DateTimeOffset? PlanExpiresAt, DateTimeOffset? NextFreeAt);
 /// <summary>TimesBasic: how many times the Basic allowance the pack gives per 24 hours.</summary>
@@ -26,6 +28,7 @@ public sealed record AiPackOrderDto(string Status, string PackName, AiQuotaDto Q
 [ApiController, Route("api/ai"), Authorize]
 public sealed class AiController(
     IChatService chat,
+    IWebSearch search,
     IAiQuotaService quotas,
     ILicenseService licenses,
     AppDbContext db,
@@ -36,6 +39,8 @@ public sealed class AiController(
     public const int MaxMessages = 40;
     public const int MaxMessageChars = 8_000;
     public const int MaxTotalChars = 32_000;
+    /// <summary>Response header with the web sources of a reply: base64 of UTF-8 JSON [{title, url}].</summary>
+    public const string SourcesHeader = "X-Sources";
 
     /// <summary>Users with a reply currently streaming. A local model answers a few requests at a time, so one per user.</summary>
     private static readonly ConcurrentDictionary<Guid, byte> Busy = new();
@@ -46,7 +51,7 @@ public sealed class AiController(
         var user = await users.GetUserAsync(User);
         if (user is null) return Unauthorized();
         if (!await licenses.HasAccessAsync(user.Id, ct)) return LicenseRequired();
-        return Ok(new ApiResponse<ChatStatus>(await chat.GetStatusAsync(ct)));
+        return Ok(new ApiResponse<ChatStatus>((await chat.GetStatusAsync(ct)) with { WebSearch = search.Enabled }));
     }
 
     /// <summary>How much of today's allowance is used, and the packs that raise it.</summary>
@@ -134,15 +139,23 @@ public sealed class AiController(
                 await StatusCode(429, new { error = LimitMessage(quota), code = "ai_limit", quota = ToDto(quota) }).ExecuteResultAsync(ControllerContext);
                 return;
             }
-            await StreamAsync(user.Id, request.Messages!, ct);
+            // Search before the model starts, so the results can go into its prompt. A failed search just means no results.
+            string? context = null;
+            IReadOnlyList<WebResult> sources = [];
+            if (request.WebSearch && search.Enabled)
+            {
+                sources = await search.SearchAsync(request.Messages![^1].Content, WebSearchPrompt.ResultCount, ct);
+                context = WebSearchPrompt.Build(sources);
+            }
+            await StreamAsync(user.Id, request.Messages!, context, sources, ct);
         }
         finally { Busy.TryRemove(user.Id, out _); }
     }
 
-    private async Task StreamAsync(Guid userId, IReadOnlyList<ChatMessage> messages, CancellationToken ct)
+    private async Task StreamAsync(Guid userId, IReadOnlyList<ChatMessage> messages, string? context, IReadOnlyList<WebResult> sources, CancellationToken ct)
     {
         var meter = new ChatUsageMeter();
-        await using var reply = chat.StreamReplyAsync(messages, meter, ct).GetAsyncEnumerator(ct);
+        await using var reply = chat.StreamReplyAsync(messages, meter, context, ct).GetAsyncEnumerator(ct);
         bool hasFirst;
         try
         {
@@ -162,6 +175,7 @@ public sealed class AiController(
         Response.ContentType = "text/plain; charset=utf-8";
         Response.Headers.CacheControl = "no-cache";
         Response.Headers["X-Accel-Buffering"] = "no"; // nginx: pass fragments through instead of buffering the whole reply
+        if (sources.Count > 0) Response.Headers[SourcesHeader] = WebSearchPrompt.EncodeSources(sources);
         if (!hasFirst) return;
         var replyChars = 0;
         try
@@ -187,7 +201,7 @@ public sealed class AiController(
         {
             // Counted once the model has started answering, so an offline model or a failed request costs nothing.
             // The model reports exact tokens at the end; a reply cut short is estimated from its length instead.
-            var tokens = meter.Reported ? meter.Total : AiQuotaRules.EstimateTokens(messages.Sum(m => m.Content.Length) + replyChars + SystemPromptAllowance);
+            var tokens = meter.Reported ? meter.Total : AiQuotaRules.EstimateTokens(messages.Sum(m => m.Content.Length) + replyChars + SystemPromptAllowance + (context?.Length ?? 0));
             await quotas.RecordAsync(userId, tokens, CancellationToken.None);
         }
     }

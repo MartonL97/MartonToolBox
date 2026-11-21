@@ -61,6 +61,9 @@ export const server = defineMessages({
     'identity.DuplicateEmail': 'An account with this email already exists.',
     'identity.InvalidEmail': 'This email address is not valid.',
     'identity.PasswordMismatch': 'The current password is not correct.',
+    'srv.avatar_missing': 'Please choose an image.',
+    'srv.avatar_too_big': 'The picture must be 2 MB or smaller.',
+    'srv.avatar_type': 'Please upload a JPEG, PNG, WebP or GIF image.',
   },
   ro: {
     'srv.invalid_login': 'Email sau parolă incorectă.',
@@ -118,6 +121,9 @@ export const server = defineMessages({
     'identity.DuplicateEmail': 'Există deja un cont cu acest email.',
     'identity.InvalidEmail': 'Această adresă de email nu este validă.',
     'identity.PasswordMismatch': 'Parola actuală nu este corectă.',
+    'srv.avatar_missing': 'Alege o imagine.',
+    'srv.avatar_too_big': 'Poza trebuie să aibă cel mult 2 MB.',
+    'srv.avatar_type': 'Încarcă o imagine JPEG, PNG, WebP sau GIF.',
   },
   hu: {
     'srv.invalid_login': 'Hibás e-mail-cím vagy jelszó.',
@@ -175,6 +181,9 @@ export const server = defineMessages({
     'identity.DuplicateEmail': 'Ezzel az e-mail-címmel már létezik fiók.',
     'identity.InvalidEmail': 'Ez az e-mail-cím nem érvényes.',
     'identity.PasswordMismatch': 'A jelenlegi jelszó nem helyes.',
+    'srv.avatar_missing': 'Válassz egy képet.',
+    'srv.avatar_too_big': 'A kép legfeljebb 2 MB lehet.',
+    'srv.avatar_type': 'JPEG, PNG, WebP vagy GIF képet tölts fel.',
   },
 });
 

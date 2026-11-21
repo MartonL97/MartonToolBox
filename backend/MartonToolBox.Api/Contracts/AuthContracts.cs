@@ -15,5 +15,12 @@ public sealed record ForgotPasswordRequest([Required, EmailAddress] string Email
 public sealed record ResetPasswordRequest(Guid UserId, [Required] string Token, [Required, MinLength(8)] string Password, [Required] string ConfirmPassword);
 public sealed record RefreshRequest(string RefreshToken);
 public sealed record AuthResult(string AccessToken, string RefreshToken, DateTimeOffset ExpiresAt, UserDto User);
-public sealed record UserDto(Guid Id, string Email, string DisplayName);
+public sealed record UserDto(Guid Id, string Email, string DisplayName, string? AvatarUrl)
+{
+    public static UserDto From(MartonToolBox.Domain.Entities.AppUser u) => new(u.Id, u.Email!, u.DisplayName, AvatarUrlFor(u));
+
+    /// <summary>The picture's address, with its change time so browsers fetch a new one after an upload.</summary>
+    public static string? AvatarUrlFor(MartonToolBox.Domain.Entities.AppUser u) =>
+        u.AvatarUpdatedAt is { } at ? $"/api/account/avatar/{u.Id}?v={at.ToUnixTimeMilliseconds()}" : null;
+}
 public sealed record LicenseDto(string LicenseKey, string Product, string Status, DateTimeOffset PurchasedAt, DateTimeOffset? ExpiresAt);

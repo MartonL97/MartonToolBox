@@ -55,6 +55,15 @@
     </div>
   </aside>
   <main>
+    @if (testSite) {
+      <div class="test-banner" role="note">
+        <span class="test-badge">
+          <mtb-icon name="shield" />
+          {{ 'nav.test_title' | t }}
+        </span>
+        <span class="test-text">{{ 'nav.test_text' | t }}</span>
+      </div>
+    }
     <header>
       <a class="mobile-brand" routerLink="/dashboard">
         <span class="brand-mark"><mtb-icon name="bolt" /></span>
@@ -70,7 +79,13 @@
       @if (auth.isAuthenticated()) {
         <div class="user-menu" (mouseenter)="openMenu()" (mouseleave)="closeMenuSoon()">
           <button type="button" class="account" (click)="toggleMenu()" [attr.aria-expanded]="menuOpen()" aria-haspopup="menu">
-            <span class="avatar">{{ initial() }}</span>
+            <span class="avatar">
+              @if (auth.user()?.avatarUrl; as src) {
+                <img [src]="src" alt="" />
+              } @else {
+                {{ initial() }}
+              }
+            </span>
             <span class="account-name">{{ auth.user()?.displayName || ('nav.account' | t) }}</span>
             <mtb-icon class="chevron" name="chevron" />
           </button>

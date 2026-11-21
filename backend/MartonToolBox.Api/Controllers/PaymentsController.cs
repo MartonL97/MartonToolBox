@@ -25,8 +25,17 @@ public sealed class PaymentsController(
         if (user is null) return Unauthorized();
         if (await licenses.HasAccessAsync(user.Id, ct)) return BadRequest(new { error = "You already have an active license." });
 
-        var session = await payments.CreateCheckoutAsync(user.Id, "Lifetime", ct);
-        return Ok(new ApiResponse<CheckoutSession>(session));
+        try
+        {
+            var session = await payments.CreateCheckoutAsync(user.Id, "Lifetime", ct);
+            return Ok(new ApiResponse<CheckoutSession>(session));
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            // Surface the reason (PayU rejection, unreachable host, DB error) instead of a bare 500.
+            logger.LogError(ex, "Checkout failed for user {UserId}.", user.Id);
+            return StatusCode(StatusCodes.Status500InternalServerError, new { error = $"Payment could not be started: {ex.GetBaseException().Message}" });
+        }
     }
 
     [HttpPost("checkout/{orderId:guid}/confirm")]

@@ -16,6 +16,7 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : Ident
     public DbSet<ShopProductVariant> ShopProductVariants => Set<ShopProductVariant>();
     public DbSet<AiUsage> AiUsages => Set<AiUsage>();
     public DbSet<AiPackGrant> AiPackGrants => Set<AiPackGrant>();
+    public DbSet<UserAvatar> UserAvatars => Set<UserAvatar>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -60,6 +61,12 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : Ident
         {
             b.HasIndex(x => new { x.ProductId, x.Size }).IsUnique();
             b.Property(x => x.Size).HasMaxLength(20);
+        });
+        builder.Entity<UserAvatar>(b =>
+        {
+            b.HasKey(x => x.UserId);
+            b.Property(x => x.ContentType).HasMaxLength(40);
+            b.HasOne<AppUser>().WithOne().HasForeignKey<UserAvatar>(x => x.UserId).OnDelete(DeleteBehavior.Cascade);
         });
         builder.Entity<AiUsage>(b => b.HasIndex(x => new { x.UserId, x.CreatedAt }));
         builder.Entity<AiPackGrant>(b =>

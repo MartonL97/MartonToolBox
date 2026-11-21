@@ -24,6 +24,8 @@ export class AppComponent {
   auth = inject(AuthService);
   cart = inject(CartService);
   nav = NAV;
+  /** Shows the "test site" notice on every page. Set to false when the shop goes live. */
+  testSite = true;
   initial = computed(() => (this.auth.user()?.displayName || this.auth.user()?.email || '?').trim().charAt(0).toUpperCase());
   menuOpen = signal(false);
   private router = inject(Router);
